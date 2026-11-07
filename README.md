@@ -6,7 +6,6 @@
 [![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Database](https://img.shields.io/badge/Database-TiDB%20Cloud%20Serverless-0052CC?logo=mysql&logoColor=white)](https://tidbcloud.com)
 [![Edge Deployment](https://img.shields.io/badge/Deployed%20on-Wasmer%20Edge-8A2BE2?logo=webassembly&logoColor=white)](https://wasmer.io)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 A cloud-native, high-availability humanitarian disaster coordination system designed for rapid crisis response during cyclones, flash floods, earthquakes, and industrial emergencies. 
 
@@ -25,18 +24,6 @@ The platform bridges **affected citizens**, **relief organizations (NGOs, hospit
 | **CI/CD Pipeline** | [GitHub Actions](https://github.com/spoorhisr-tech/Disaster-Webapplication/actions) | Automated test suite, container packaging, and continuous deployment |
 
 ---
-
-## 👥 Team Roles & Responsibilities
-
-| Role | Member | Responsibilities & Deliverables |
-| :--- | :--- | :--- |
-| **Member 1** | **Frontend & Citizen Interface** | • Citizen SOS emergency request form<br>• Real-time request tracking page (`REQ-XXXXXXXX`)<br>• Public evacuation shelter map & active disaster alerts<br>• Responsive web UI and API integration |
-| **Member 2** | **Authentication & API Gateway** | • API Gateway proxy routing & rate limiting<br>• Cloudflare Turnstile anti-bot verification<br>• Role-based security policies & token validation<br>• Security compliance and traffic governance |
-| **Member 3** | **Backend & Database**<br>*(Lead Backend Developer: Spoorthi S R)* | • **Laravel 13** backend architecture & REST APIs<br>• **TiDB Cloud** distributed database schema, relationships & seeders<br>• **Wasmer Edge** WebAssembly serverless deployment & package manifests<br>• Multi-tenant organization scoping (`/api/my-shelters`, `/api/my-resources`)<br>• **GitHub Actions CI/CD** pipeline with automated test suites & secret injection |
-| **Member 4** | **Cloud Storage, Alerts & E2E Testing** | • S3 / Cloudflare R2 object storage for disaster damage photos<br>• Push/SMS emergency alert notifications for critical incidents<br>• Cloud latency, uptime & traffic monitoring<br>• End-to-end integration and API test suites |
-
----
-
 ## 🏛️ System Architecture
 
 ```mermaid
@@ -238,3 +225,4 @@ The project employs an automated **GitHub Actions** pipeline ([`.github/workflow
 
 ## 📄 License
 This project is open-source under the [MIT License](LICENSE).
+
