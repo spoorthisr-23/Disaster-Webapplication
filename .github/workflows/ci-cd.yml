@@ -101,7 +101,15 @@ jobs:
       - name: Authenticate with Wasmer
         env:
           WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
-        run: wasmer login "$WASMER_TOKEN"
+        run: |
+          wasmer login "$WASMER_TOKEN"
+          CURRENT_USER=$(wasmer whoami 2>/dev/null | awk '{print $NF}' | tr -d '[:space:]')
+          echo "Authenticated Wasmer username: '$CURRENT_USER'"
+          if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "logged" ]; then
+            sed -i "s/^owner: .*/owner: $CURRENT_USER/" app.yaml
+            sed -i "s|^name = \".*/|name = \"$CURRENT_USER/|" wasmer.toml
+            sed -i '/^app_id:/d' app.yaml
+          fi
 
       - name: Auto-bump Package Version
         run: |

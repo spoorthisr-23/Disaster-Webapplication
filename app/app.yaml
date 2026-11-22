@@ -1,7 +1,6 @@
 kind: wasmer.io/App.v0
 name: WebApp
-owner: spoorhisr-tech
-app_id: da_KAmI3tXUmJPa
+owner: spoorthisr-23
 package: .
 
 env:
