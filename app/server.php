@@ -41,11 +41,22 @@ if (file_exists($envFile)) {
     }
 }
 
-$host = getenv('DB_HOST') ?: ($env['DB_HOST'] ?? 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com');
-$port = getenv('DB_PORT') ?: ($env['DB_PORT'] ?? '4000');
-$db = getenv('DB_DATABASE') ?: ($env['DB_DATABASE'] ?? 'test');
-$user = getenv('DB_USERNAME') ?: ($env['DB_USERNAME'] ?? '4RF8cAaQXxcVam6.root');
-$pass = getenv('DB_PASSWORD') ?: ($env['DB_PASSWORD'] ?? 'eq5NxBAQZUoL2tqE');
+$rawHost = getenv('DB_HOST') ?: ($env['DB_HOST'] ?? 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com');
+$isTiDB = (strpos($rawHost, 'tidbcloud.com') !== false || empty($rawHost) || strpos(getenv('DB_USERNAME') ?? '', 'user_') === 0);
+
+if ($isTiDB) {
+    $host = 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com';
+    $port = '4000';
+    $db   = 'test';
+    $user = '4RF8cAaQXxcVam6.root';
+    $pass = 'eq5NxBAQZUoL2tqE';
+} else {
+    $host = $rawHost;
+    $port = getenv('DB_PORT') ?: ($env['DB_PORT'] ?? '3306');
+    $db   = getenv('DB_DATABASE') ?: ($env['DB_DATABASE'] ?? 'test');
+    $user = getenv('DB_USERNAME') ?: ($env['DB_USERNAME'] ?? 'root');
+    $pass = getenv('DB_PASSWORD') ?: ($env['DB_PASSWORD'] ?? '');
+}
 $caCandidate = getenv('MYSQL_ATTR_SSL_CA') ?: (__DIR__ . '/config/cacert.pem');
 $ca = file_exists($caCandidate) ? $caCandidate : (__DIR__ . '/config/cacert.pem');
 
