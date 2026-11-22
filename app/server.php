@@ -4,6 +4,9 @@
  * Emulates full production routing for React SPA & TiDB Cloud Backend
  */
 
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
+ini_set('display_errors', '0');
+
 $uri = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');
 $publicDir = __DIR__ . '/public';
 
@@ -50,8 +53,11 @@ $opts = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ];
+$sslKey = defined('\Pdo\Mysql::ATTR_SSL_CA') 
+    ? \Pdo\Mysql::ATTR_SSL_CA 
+    : (defined('PDO::MYSQL_ATTR_SSL_CA') ? PDO::MYSQL_ATTR_SSL_CA : 1007);
 if (file_exists($ca)) {
-    $opts[PDO::MYSQL_ATTR_SSL_CA] = $ca;
+    $opts[$sslKey] = $ca;
 }
 
 try {
