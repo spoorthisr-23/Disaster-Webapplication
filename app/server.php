@@ -520,6 +520,9 @@ if (strpos($uri, '/api') === 0) {
 $indexPath = $publicDir . '/index.html';
 if (file_exists($indexPath)) {
     header('Content-Type: text/html; charset=UTF-8');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
     readfile($indexPath);
     exit(0);
 }
