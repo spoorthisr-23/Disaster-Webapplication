@@ -73,9 +73,8 @@ export function OrganizationDashboardView({ onNavigate }) {
   });
   const [savingNewResource, setSavingNewResource] = useState(false);
 
-  const [selectedShelter, setSelectedShelter] = useState(null);
-  const [newOccupancy, setNewOccupancy] = useState('');
-  const [savingShelter, setSavingShelter] = useState(false);
+  const [updatingSosId, setUpdatingSosId] = useState(null);
+  const [sosFilter, setSosFilter] = useState('all');
 
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [dispatchData, setDispatchData] = useState({
@@ -188,24 +187,26 @@ export function OrganizationDashboardView({ onNavigate }) {
     }
   };
 
-  // Handle update shelter occupancy
-  const handleUpdateOccupancy = async (e) => {
-    e.preventDefault();
-    if (!selectedShelter || newOccupancy === '') return;
-
-    setSavingShelter(true);
+  // Handle update emergency request status
+  const handleUpdateSosStatus = async (id, newStatus) => {
+    setUpdatingSosId(id);
     try {
-      await api.updateCampOccupancy(selectedShelter.shelter_id, {
-        current_occupancy: parseInt(newOccupancy, 10),
-      });
-      setSelectedShelter(null);
-      setNewOccupancy('');
+      await api.updateEmergencyRequestStatus(id, newStatus);
       await loadDashboard();
     } catch (err) {
-      alert(err.message || 'Failed to update camp occupancy');
+      alert(err.message || 'Failed to update emergency request status');
     } finally {
-      setSavingShelter(false);
+      setUpdatingSosId(null);
     }
+  };
+
+  const handleOpenDispatchForRequest = (req) => {
+    setDispatchData((prev) => ({
+      ...prev,
+      request_id: `REQ-${req.id}`,
+      notes: `Fulfilling emergency distress call #${req.id} from ${req.requester_name || 'Citizen'} (${req.request_type || 'Relief assistance'})`,
+    }));
+    setShowDispatchModal(true);
   };
 
   // Handle create distribution dispatch
@@ -288,12 +289,22 @@ export function OrganizationDashboardView({ onNavigate }) {
     recent_ledger: [],
   };
   const recent_activities = dashboardData?.recent_activities || dashboardData?.recent_activity || [];
+  const emergencyRequests = dashboardData?.emergency_requests || [];
+
+  const pendingSosCount = (dashboardData?.emergency_requests || []).filter(
+    (r) => r.status === 'pending' || r.status === 'new'
+  ).length || (statistics?.pending_requests ?? 0);
 
   const sidebarLinks = [
     { id: 'overview', label: 'Main Overview', icon: LayoutDashboard },
+    { 
+      id: 'requests', 
+      label: 'Citizen SOS Queue', 
+      icon: AlertTriangle, 
+      badge: pendingSosCount > 0 ? `${pendingSosCount} pending` : null 
+    },
     { id: 'inventory', label: 'Resource Inventory', icon: Package, badge: (inventory?.low_stock_count ?? 0) > 0 ? `${inventory.low_stock_count} low` : null },
     { id: 'volunteers', label: 'Volunteer Roster', icon: HeartHandshake, badge: volunteers?.available ?? 0 },
-    { id: 'camps', label: 'Camps & Shelters', icon: Home, badge: `${camps_and_shelters?.available_spaces ?? 0} spots` },
     { id: 'distributions', label: 'Distribution Ledger', icon: Share2 },
     { id: 'activities', label: 'Recent Activities', icon: Activity },
   ];
@@ -495,17 +506,296 @@ export function OrganizationDashboardView({ onNavigate }) {
                 );
               })}
             </div>
+
+            {/* Quick Priority Callouts in Main Overview */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+              {/* Quick Incoming Distress Calls Preview */}
+              <div className="bg-white rounded-xl border border-rose-200/80 p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-rose-100">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse" />
+                    <h3 className="text-xs font-bold text-[#172033] uppercase tracking-wider">
+                      Priority Distress Signals ({pendingSosCount} Pending)
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setActiveSection('requests')}
+                    className="text-xs font-semibold text-[#1D4ED8] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View SOS Queue</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {emergencyRequests.filter((r) => r.status === 'pending' || r.status === 'new').length === 0 ? (
+                  <div className="py-4 text-center text-xs text-[#5B6475] flex items-center justify-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>No pending emergency distress calls awaiting dispatch.</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {emergencyRequests
+                      .filter((r) => r.status === 'pending' || r.status === 'new')
+                      .slice(0, 2)
+                      .map((req) => (
+                        <div key={req.id} className="p-2.5 rounded-lg bg-rose-50/40 border border-rose-200/50 flex items-center justify-between gap-3 text-xs">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-rose-700">#REQ-{req.id}</span>
+                              <span className="font-semibold text-[#172033] truncate">{req.requester_name || 'Citizen'}</span>
+                            </div>
+                            <p className="text-[11px] text-[#5B6475] truncate mt-0.5">{req.location_name || 'Field site'} • {req.people_affected || 1} people</p>
+                          </div>
+                          <button
+                            onClick={() => handleUpdateSosStatus(req.id, 'in_progress')}
+                            disabled={updatingSosId === req.id}
+                            className="shrink-0 px-2.5 py-1 rounded bg-[#1D4ED8] hover:bg-[#1E40AF] text-white text-[11px] font-semibold transition cursor-pointer"
+                          >
+                            Dispatch
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Designated Shelters Reference Card (Read-Only) */}
+              <div className="bg-white rounded-xl border border-[#D8DEE8] p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <Home className="w-4 h-4 text-teal-600" />
+                    <h3 className="text-xs font-bold text-[#172033] uppercase tracking-wider">
+                      Regional Shelters Reference (Admin Managed)
+                    </h3>
+                  </div>
+                  <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {camps_and_shelters.available_spaces} Spaces Free
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {camps_and_shelters.shelters.slice(0, 2).map((shelter) => {
+                    const percent = Math.min(100, Math.round((shelter.current_occupancy / shelter.capacity) * 100));
+                    return (
+                      <div key={shelter.shelter_id} className="p-2.5 rounded-lg bg-slate-50 border border-gray-100 text-xs">
+                        <div className="flex items-center justify-between font-semibold text-[#172033]">
+                          <span>{shelter.shelter_name}</span>
+                          <span className="text-[11px] font-normal text-[#5B6475]">{shelter.area}</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden mt-1.5">
+                          <div
+                            className={`h-full ${percent >= 100 ? 'bg-rose-600' : percent > 80 ? 'bg-amber-500' : 'bg-emerald-600'}`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-[#5B6475] mt-1">
+                          <span>{shelter.current_occupancy} / {shelter.capacity} occupants ({percent}%)</span>
+                          <span>Contact: {shelter.contact_person || 'Field In-Charge'}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </section>
         )}
 
-        {/* 2. RESOURCE INVENTORY SECTION */}
+        {/* 2. CITIZEN SOS & EMERGENCY TRIAGE QUEUE */}
+        {(activeSection === 'requests' || activeSection === 'all') && (
+          <section className="bg-white rounded-2xl border border-[#D8DEE8] p-6 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-bold text-[#172033] flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-rose-600" />
+                  2. Citizen SOS &amp; Emergency Triage Queue
+                </h2>
+                <p className="text-xs text-[#5B6475] mt-0.5">
+                  Direct citizen distress signals awaiting NGO response, volunteer dispatch, or relief allocation in {organization.area}.
+                </p>
+              </div>
+
+              {/* Status Filter Tabs */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                {['all', 'pending', 'in_progress', 'completed'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setSosFilter(tab)}
+                    className={`px-3 py-1 rounded-lg capitalize transition cursor-pointer ${
+                      sosFilter === tab
+                        ? 'bg-white text-[#172033] shadow-xs'
+                        : 'text-[#5B6475] hover:text-[#172033]'
+                    }`}
+                  >
+                    {tab.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Counters Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
+                <span className="text-[11px] text-[#5B6475]">Total SOS Requests</span>
+                <p className="text-lg font-bold text-[#172033] mt-1">{emergencyRequests.length}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-rose-50/60 border border-rose-200/60">
+                <span className="text-[11px] text-rose-700 font-semibold">Awaiting Dispatch</span>
+                <p className="text-lg font-bold text-rose-800 mt-1">
+                  {emergencyRequests.filter((r) => r.status === 'pending' || r.status === 'new').length}
+                </p>
+              </div>
+              <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200/60">
+                <span className="text-[11px] text-blue-700 font-semibold">Field Team Dispatched</span>
+                <p className="text-lg font-bold text-blue-800 mt-1">
+                  {emergencyRequests.filter((r) => r.status === 'in_progress' || r.status === 'approved').length}
+                </p>
+              </div>
+              <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/60">
+                <span className="text-[11px] text-emerald-700 font-semibold">Resolved &amp; Safe</span>
+                <p className="text-lg font-bold text-emerald-800 mt-1">
+                  {emergencyRequests.filter((r) => r.status === 'completed' || r.status === 'fulfilled').length}
+                </p>
+              </div>
+            </div>
+
+            {/* Emergency Request Cards Grid */}
+            {emergencyRequests.filter((r) => {
+              if (sosFilter === 'all') return true;
+              if (sosFilter === 'pending') return r.status === 'pending' || r.status === 'new';
+              if (sosFilter === 'in_progress') return r.status === 'in_progress' || r.status === 'approved';
+              if (sosFilter === 'completed') return r.status === 'completed' || r.status === 'fulfilled';
+              return true;
+            }).length === 0 ? (
+              <div className="text-center py-12 bg-slate-50/50 rounded-xl border border-dashed border-gray-200">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                <h4 className="text-sm font-bold text-[#172033]">No requests matching this filter</h4>
+                <p className="text-xs text-[#5B6475] mt-1">All citizen signals in this category have been processed.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {emergencyRequests
+                  .filter((r) => {
+                    if (sosFilter === 'all') return true;
+                    if (sosFilter === 'pending') return r.status === 'pending' || r.status === 'new';
+                    if (sosFilter === 'in_progress') return r.status === 'in_progress' || r.status === 'approved';
+                    if (sosFilter === 'completed') return r.status === 'completed' || r.status === 'fulfilled';
+                    return true;
+                  })
+                  .map((req) => {
+                    const isPending = req.status === 'pending' || req.status === 'new';
+                    const isInProgress = req.status === 'in_progress' || req.status === 'approved';
+                    const isCompleted = req.status === 'completed' || req.status === 'fulfilled';
+
+                    return (
+                      <div
+                        key={req.id}
+                        className={`p-4 rounded-xl border transition space-y-3 ${
+                          isPending
+                            ? 'bg-rose-50/20 border-rose-200'
+                            : isInProgress
+                            ? 'bg-blue-50/20 border-blue-200'
+                            : 'bg-emerald-50/15 border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-[#1D4ED8] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                              #REQ-{req.id}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                req.priority === 'critical'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : req.priority === 'high'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {req.priority || 'NORMAL'} PRIORITY
+                            </span>
+                          </div>
+                          <StatusBadge status={req.status} />
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between text-xs font-semibold text-[#172033]">
+                            <span>{req.requester_name || 'Citizen in Distress'}</span>
+                            <span className="text-[#5B6475] font-normal flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {req.people_affected || 1} people
+                            </span>
+                          </div>
+                          {req.requester_phone && (
+                            <a
+                              href={`tel:${req.requester_phone}`}
+                              className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-0.5"
+                            >
+                              <Phone className="w-3 h-3" />
+                              <span>{req.requester_phone}</span>
+                            </a>
+                          )}
+                        </div>
+
+                        <div className="text-xs text-[#5B6475] bg-white p-2.5 rounded-lg border border-gray-100 space-y-1">
+                          <div className="font-semibold text-[#172033] flex items-center gap-1 text-[11px]">
+                            <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                            <span className="truncate">{req.location_name || 'Field Location Not Specified'}</span>
+                          </div>
+                          <p className="text-[11px] text-gray-600 line-clamp-2">
+                            {req.description || `${req.request_type || 'Relief'} requested.`}
+                          </p>
+                        </div>
+
+                        {/* Action Buttons Toolbar */}
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 text-xs">
+                          <button
+                            onClick={() => handleOpenDispatchForRequest(req)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold transition cursor-pointer"
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                            <span>Log Aid Delivery</span>
+                          </button>
+
+                          <div className="flex items-center gap-1.5">
+                            {isPending && (
+                              <button
+                                disabled={updatingSosId === req.id}
+                                onClick={() => handleUpdateSosStatus(req.id, 'in_progress')}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1D4ED8] hover:bg-[#1E40AF] text-white font-semibold transition cursor-pointer disabled:opacity-50"
+                              >
+                                {updatingSosId === req.id ? 'Updating...' : 'Dispatch Team'}
+                              </button>
+                            )}
+
+                            {!isCompleted && (
+                              <button
+                                disabled={updatingSosId === req.id}
+                                onClick={() => handleUpdateSosStatus(req.id, 'completed')}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition cursor-pointer disabled:opacity-50"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Mark Safe</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 3. RESOURCE INVENTORY SECTION */}
         {(activeSection === 'inventory' || activeSection === 'all') && (
           <section className="bg-white rounded-2xl border border-[#D8DEE8] p-6 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-gray-100">
               <div>
                 <h2 className="text-base font-bold text-[#172033] flex items-center gap-2">
                   <Package className="w-5 h-5 text-teal-600" />
-                  2. Warehouse Inventory &amp; Stock Levels
+                  3. Warehouse Inventory &amp; Stock Levels
                 </h2>
                 <p className="text-xs text-[#5B6475] mt-0.5">
                   Real-time stock ledger owned and managed by your organization.
@@ -639,14 +929,14 @@ export function OrganizationDashboardView({ onNavigate }) {
           </section>
         )}
 
-        {/* 3. VOLUNTEER MANAGEMENT SECTION */}
+        {/* 4. VOLUNTEER MANAGEMENT SECTION */}
         {(activeSection === 'volunteers' || activeSection === 'all') && (
           <section className="bg-white rounded-2xl border border-[#D8DEE8] p-6 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-gray-100">
               <div>
                 <h2 className="text-base font-bold text-[#172033] flex items-center gap-2">
                   <HeartHandshake className="w-5 h-5 text-blue-600" />
-                  3. Volunteer Roster &amp; Task Assignments
+                  4. Volunteer Roster &amp; Task Assignments
                 </h2>
                 <p className="text-xs text-[#5B6475] mt-0.5">
                   Assign available first responders to emergency relief activities in {organization.area}.
@@ -735,106 +1025,6 @@ export function OrganizationDashboardView({ onNavigate }) {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </section>
-        )}
-
-        {/* 4. CAMP / SHELTER OCCUPANCY SUMMARY */}
-        {(activeSection === 'camps' || activeSection === 'all') && (
-          <section className="bg-white rounded-2xl border border-[#D8DEE8] p-6 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-gray-100">
-              <div>
-                <h2 className="text-base font-bold text-[#172033] flex items-center gap-2">
-                  <Home className="w-5 h-5 text-teal-600" />
-                  4. Camps &amp; Relief Shelters Capacity
-                </h2>
-                <p className="text-xs text-[#5B6475] mt-0.5">
-                  Monitoring shelter headroom to prevent overcrowding during evacuation.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {camps_and_shelters.available_spaces} Spaces Remaining
-                </span>
-              </div>
-            </div>
-
-            {/* Camps Metrics Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
-                <span className="text-[11px] text-[#5B6475]">Total Camps</span>
-                <p className="text-lg font-bold text-[#172033] mt-1">{camps_and_shelters.total_camps}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
-                <span className="text-[11px] text-[#5B6475]">Total Capacity</span>
-                <p className="text-lg font-bold text-[#172033] mt-1">{camps_and_shelters.total_capacity.toLocaleString()}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/60">
-                <span className="text-[11px] text-amber-700 font-semibold">Current Occupancy</span>
-                <p className="text-lg font-bold text-amber-800 mt-1">{camps_and_shelters.current_occupancy.toLocaleString()}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/60">
-                <span className="text-[11px] text-emerald-700 font-semibold">Available Spaces</span>
-                <p className="text-lg font-bold text-emerald-800 mt-1">{camps_and_shelters.available_spaces.toLocaleString()}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-rose-50/60 border border-rose-200/60">
-                <span className="text-[11px] text-rose-700 font-semibold">Full Camps</span>
-                <p className="text-lg font-bold text-rose-800 mt-1">{camps_and_shelters.full_camps}</p>
-              </div>
-            </div>
-
-            {/* Shelter Progress Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {camps_and_shelters.shelters.map((shelter) => {
-                const percent = Math.min(100, Math.round((shelter.current_occupancy / shelter.capacity) * 100));
-                const remaining = Math.max(0, shelter.capacity - shelter.current_occupancy);
-                const isFull = percent >= 100 || shelter.status === 'FULL';
-
-                return (
-                  <div key={shelter.shelter_id} className="p-4 rounded-xl border border-gray-200 bg-slate-50/40 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-bold text-[#172033] text-sm">{shelter.shelter_name}</h4>
-                        <p className="text-xs text-[#5B6475] flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-gray-400" />
-                          <span>{shelter.area}</span>
-                        </p>
-                      </div>
-                      <StatusBadge status={shelter.status} />
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-[#5B6475]">Occupancy: {shelter.current_occupancy} / {shelter.capacity}</span>
-                        <span className="font-bold text-[#172033]">{percent}%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-500 ${
-                            isFull ? 'bg-rose-600' : percent > 80 ? 'bg-amber-500' : 'bg-emerald-600'
-                          }`}
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-[#5B6475] mt-1.5 pt-2 border-t border-gray-100">
-                        <span>Available Spaces: <strong className="text-emerald-700">{remaining}</strong></span>
-                        <button
-                          onClick={() => {
-                            setSelectedShelter(shelter);
-                            setNewOccupancy(shelter.current_occupancy);
-                          }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#1D4ED8] hover:bg-[#1E40AF] text-white text-[11px] font-medium transition cursor-pointer"
-                        >
-                          <Edit3 className="w-3 h-3" />
-                          <span>Update Occupancy</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </section>
         )}
@@ -1186,62 +1376,7 @@ export function OrganizationDashboardView({ onNavigate }) {
         </div>
       )}
 
-      {/* =====================================================================
-          MODAL: Update Shelter Occupancy
-          ===================================================================== */}
-      {selectedShelter && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-gray-200">
-            <h3 className="text-base font-bold text-[#172033]">
-              Update Occupancy: {selectedShelter.shelter_name}
-            </h3>
-            <p className="text-xs text-[#5B6475] mt-1">
-              Total Capacity: <strong className="text-[#172033]">{selectedShelter.capacity}</strong> • {selectedShelter.area}
-            </p>
 
-            <form onSubmit={handleUpdateOccupancy} className="mt-4 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#172033] mb-1">
-                  Current Occupant Count (0 - {selectedShelter.capacity})
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max={selectedShelter.capacity}
-                  required
-                  value={newOccupancy}
-                  onChange={(e) => setNewOccupancy(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-gray-300 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="text-xs text-[#5B6475] bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <span>Calculated Headroom: </span>
-                <strong className="text-emerald-700">
-                  {Math.max(0, selectedShelter.capacity - (parseInt(newOccupancy, 10) || 0))} spaces available
-                </strong>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setSelectedShelter(null)}
-                  className="px-3.5 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingShelter}
-                  className="px-4 py-1.5 rounded-lg bg-[#1D4ED8] hover:bg-[#1E40AF] text-white text-xs font-semibold shadow transition"
-                >
-                  {savingShelter ? 'Updating...' : 'Save Occupancy'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* =====================================================================
           MODAL: Create Distribution Dispatch Ticket

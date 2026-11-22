@@ -396,6 +396,7 @@ if (strpos($uri, '/api') === 0) {
             'camps_and_shelters' => $campsAndShelters,
             'shelters' => $campsAndShelters,
             'distributions' => $distributionSummary,
+            'emergency_requests' => $requests,
             'recent_activities' => $activities,
             'recent_activity' => $activities,
         ]);
@@ -410,10 +411,10 @@ if (strpos($uri, '/api') === 0) {
         $area = trim($input['assigned_area'] ?? 'Coastal Sector');
         $status = trim($input['assignment_status'] ?? 'assigned');
 
-        $up = $pdo->prepare("UPDATE volunteers SET assigned_area = ?, assignment_status = ?, is_available = ? WHERE id = ?");
+        $up = $pdo->prepare("UPDATE volunteers SET assigned_area = ?, assignment_status = ?, is_available = ? WHERE volunteer_id = ?");
         $up->execute([$area, $status, ($status === 'available' ? 1 : 0), $volId]);
 
-        $sel = $pdo->prepare("SELECT * FROM volunteers WHERE id = ?");
+        $sel = $pdo->prepare("SELECT v.*, v.volunteer_id as id FROM volunteers v WHERE v.volunteer_id = ?");
         $sel->execute([$volId]);
         echo json_encode(['message' => 'Volunteer assigned successfully.', 'volunteer' => $sel->fetch()]);
         exit;
@@ -467,7 +468,7 @@ if (strpos($uri, '/api') === 0) {
         $shelterId = (int) $matches[1];
         $newOcc = (int) ($input['current_occupancy'] ?? 0);
 
-        $sStmt = $pdo->prepare("SELECT * FROM shelters WHERE id = ?");
+        $sStmt = $pdo->prepare("SELECT s.*, s.shelter_id as id FROM shelters s WHERE s.shelter_id = ?");
         $sStmt->execute([$shelterId]);
         $shelter = $sStmt->fetch();
 
@@ -478,7 +479,7 @@ if (strpos($uri, '/api') === 0) {
         }
 
         $status = ($newOcc >= (int) $shelter['capacity']) ? 'FULL' : 'OPEN';
-        $up = $pdo->prepare("UPDATE shelters SET current_occupancy = ?, status = ? WHERE id = ?");
+        $up = $pdo->prepare("UPDATE shelters SET current_occupancy = ?, status = ? WHERE shelter_id = ?");
         $up->execute([$newOcc, $status, $shelterId]);
 
         $sStmt->execute([$shelterId]);
@@ -512,6 +513,22 @@ if (strpos($uri, '/api') === 0) {
         $sel->execute([$distId]);
         http_response_code(201);
         echo json_encode(['message' => 'Distribution record registered.', 'distribution' => $sel->fetch()]);
+        exit;
+    }
+
+    // =========================================================================
+    // PUT /api/organization/emergency-requests/{id}/status
+    // =========================================================================
+    if (preg_match('#^/api/organization/emergency-requests/(\d+)/status$#', $uri, $matches) && $method === 'PUT') {
+        $reqId = (int) $matches[1];
+        $newStatus = trim($input['status'] ?? 'in_progress');
+
+        $up = $pdo->prepare("UPDATE emergency_requests SET status = ?, updated_at = NOW() WHERE id = ?");
+        $up->execute([$newStatus, $reqId]);
+
+        $stmt = $pdo->prepare("SELECT * FROM emergency_requests WHERE id = ?");
+        $stmt->execute([$reqId]);
+        echo json_encode(['message' => 'Emergency request status updated.', 'request' => $stmt->fetch()]);
         exit;
     }
 
@@ -583,12 +600,108 @@ if (strpos($uri, '/api') === 0) {
         echo json_encode($pdo->query("SELECT * FROM resources ORDER BY resource_id DESC")->fetchAll());
         exit;
     }
+    if ($uri === '/api/shelters' && $method === 'POST') {
+        $name = trim($input['shelter_name'] ?? '');
+        $area = trim($input['area'] ?? '');
+        $cap = max(1, (int) ($input['capacity'] ?? 100));
+        $occ = max(0, (int) ($input['current_occupancy'] ?? 0));
+        $status = trim($input['status'] ?? 'OPEN');
+        $contact = trim($input['contact_person'] ?? '');
+        $phone = trim($input['contact_phone'] ?? '');
+
+        $ins = $pdo->prepare("INSERT INTO shelters (shelter_name, area, capacity, current_occupancy, status, contact_person, contact_phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+        $ins->execute([$name, $area, $cap, $occ, $status, $contact, $phone]);
+        $newId = $pdo->lastInsertId();
+
+        $sel = $pdo->prepare("SELECT s.*, s.shelter_id as id FROM shelters s WHERE s.shelter_id = ?");
+        $sel->execute([$newId]);
+        http_response_code(201);
+        echo json_encode($sel->fetch());
+        exit;
+    }
+    if (preg_match('#^/api/shelters/(\d+)$#', $uri, $matches) && $method === 'PUT') {
+        $shelterId = (int) $matches[1];
+        $name = isset($input['shelter_name']) ? trim($input['shelter_name']) : null;
+        $area = isset($input['area']) ? trim($input['area']) : null;
+        $cap = isset($input['capacity']) ? (int) $input['capacity'] : null;
+        $occ = isset($input['current_occupancy']) ? (int) $input['current_occupancy'] : null;
+        $status = isset($input['status']) ? trim($input['status']) : null;
+        $contact = isset($input['contact_person']) ? trim($input['contact_person']) : null;
+        $phone = isset($input['contact_phone']) ? trim($input['contact_phone']) : null;
+
+        $updates = [];
+        $params = [];
+        if ($name !== null) { $updates[] = "shelter_name = ?"; $params[] = $name; }
+        if ($area !== null) { $updates[] = "area = ?"; $params[] = $area; }
+        if ($cap !== null) { $updates[] = "capacity = ?"; $params[] = $cap; }
+        if ($occ !== null) { $updates[] = "current_occupancy = ?"; $params[] = $occ; }
+        if ($status !== null) { $updates[] = "status = ?"; $params[] = $status; }
+        if ($contact !== null) { $updates[] = "contact_person = ?"; $params[] = $contact; }
+        if ($phone !== null) { $updates[] = "contact_phone = ?"; $params[] = $phone; }
+
+        if (!empty($updates)) {
+            $params[] = $shelterId;
+            $stmt = $pdo->prepare("UPDATE shelters SET " . implode(', ', $updates) . " WHERE shelter_id = ?");
+            $stmt->execute($params);
+        }
+
+        $sel = $pdo->prepare("SELECT s.*, s.shelter_id as id FROM shelters s WHERE s.shelter_id = ?");
+        $sel->execute([$shelterId]);
+        echo json_encode($sel->fetch());
+        exit;
+    }
     if ($uri === '/api/shelters') {
-        echo json_encode($pdo->query("SELECT * FROM shelters ORDER BY id ASC")->fetchAll());
+        echo json_encode($pdo->query("SELECT s.*, s.shelter_id as id FROM shelters s ORDER BY s.shelter_id ASC")->fetchAll());
+        exit;
+    }
+
+    if (preg_match('#^/api/volunteers/(\d+)$#', $uri, $matches) && $method === 'PUT') {
+        $volId = (int) $matches[1];
+        $avail = isset($input['is_available']) ? (!empty($input['is_available']) ? 1 : 0) : null;
+        $name = isset($input['name']) ? trim($input['name']) : null;
+        $phone = isset($input['phone']) ? trim($input['phone']) : null;
+        $skills = isset($input['skills']) ? trim($input['skills']) : null;
+        $area = isset($input['assigned_area']) ? trim($input['assigned_area']) : null;
+
+        $updates = [];
+        $params = [];
+        if ($avail !== null) { $updates[] = "is_available = ?"; $params[] = $avail; }
+        if ($name !== null) { $updates[] = "name = ?"; $params[] = $name; }
+        if ($phone !== null) { $updates[] = "phone = ?"; $params[] = $phone; }
+        if ($skills !== null) { $updates[] = "skills = ?"; $params[] = $skills; }
+        if ($area !== null) { $updates[] = "assigned_area = ?"; $params[] = $area; }
+
+        if (!empty($updates)) {
+            $params[] = $volId;
+            $stmt = $pdo->prepare("UPDATE volunteers SET " . implode(', ', $updates) . " WHERE volunteer_id = ?");
+            $stmt->execute($params);
+        }
+
+        $sel = $pdo->prepare("SELECT v.*, v.volunteer_id as id FROM volunteers v WHERE v.volunteer_id = ?");
+        $sel->execute([$volId]);
+        echo json_encode($sel->fetch());
+        exit;
+    }
+
+    if ($uri === '/api/volunteers' && $method === 'POST') {
+        $name = trim($input['name'] ?? '');
+        $phone = trim($input['phone'] ?? '');
+        $skills = trim($input['skills'] ?? 'General Volunteer Relief');
+        $area = trim($input['assigned_area'] ?? 'Central Operations');
+        $avail = !empty($input['is_available']) ? 1 : 0;
+
+        $ins = $pdo->prepare("INSERT INTO volunteers (name, phone, skills, assigned_area, is_available, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+        $ins->execute([$name, $phone, $skills, $area, $avail]);
+        $newId = $pdo->lastInsertId();
+
+        $sel = $pdo->prepare("SELECT v.*, v.volunteer_id as id FROM volunteers v WHERE v.volunteer_id = ?");
+        $sel->execute([$newId]);
+        http_response_code(201);
+        echo json_encode($sel->fetch());
         exit;
     }
     if ($uri === '/api/volunteers') {
-        echo json_encode($pdo->query("SELECT * FROM volunteers ORDER BY id ASC")->fetchAll());
+        echo json_encode($pdo->query("SELECT v.*, v.volunteer_id as id FROM volunteers v ORDER BY v.volunteer_id ASC")->fetchAll());
         exit;
     }
     if ($uri === '/api/distributions') {
