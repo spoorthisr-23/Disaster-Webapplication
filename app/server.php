@@ -65,8 +65,8 @@ $pdo = null;
 $opts = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    1007 => $ca,   // MySQL ATTR_SSL_CA (direct integer key avoids PHP 8.5 deprecation notice on PDO::MYSQL_ATTR_SSL_CA)
-    1014 => false, // MySQL ATTR_SSL_VERIFY_SERVER_CERT (disables server cert verification for WASI edge container)
+    1009 => $ca,   // MySQL ATTR_SSL_CA = 1009 (1007 was SSL_KEY, which caused SSL handshake failure)
+    1014 => false, // MySQL ATTR_SSL_VERIFY_SERVER_CERT = 1014 (disables server cert verification for WASI edge container)
 ];
 
 try {
