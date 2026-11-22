@@ -33,26 +33,11 @@ export function App() {
     }
   });
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    return localStorage.getItem('sidebar_collapsed') === 'true';
-  });
-
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [isAuthView, setIsAuthView] = useState(() => {
     return window.location.pathname === '/login';
   });
-
-  // Toggle sidebar and persist user preference in localStorage
-  const handleToggleSidebar = () => {
-    setIsSidebarCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('sidebar_collapsed', String(next));
-      } catch {}
-      return next;
-    });
-  };
 
   // Listen to popstate for back/forward browser button navigation
   useEffect(() => {
@@ -113,7 +98,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#F7F9FC] text-[#172033] flex font-sans antialiased">
-      {/* 1. Left Sidebar Navigation (Desktop Collapsible & Mobile Drawer) */}
+      {/* 1. Left Sidebar Navigation (Clean permanent left sidebar) */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={(tab) => {
@@ -126,8 +111,6 @@ export function App() {
         user={user}
         onLogout={handleLogout}
         onOpenLogin={handleOpenLogin}
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={handleToggleSidebar}
         isMobileOpen={isMobileSidebarOpen}
         setIsMobileOpen={setIsMobileSidebarOpen}
       />
@@ -139,8 +122,6 @@ export function App() {
           user={user}
           onLogout={handleLogout}
           onOpenLogin={handleOpenLogin}
-          isSidebarCollapsed={isSidebarCollapsed}
-          onToggleSidebar={handleToggleSidebar}
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />
 

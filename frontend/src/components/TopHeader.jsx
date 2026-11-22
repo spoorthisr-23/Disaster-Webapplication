@@ -1,12 +1,11 @@
 import React from 'react';
 import {
-  PanelLeft,
+  Menu,
   Building2,
   ShieldCheck,
   LogOut,
   LogIn,
   ChevronRight,
-  ShieldAlert,
 } from 'lucide-react';
 
 export function TopHeader({
@@ -14,8 +13,6 @@ export function TopHeader({
   user,
   onLogout,
   onOpenLogin,
-  isSidebarCollapsed,
-  onToggleSidebar,
   onOpenMobileSidebar,
 }) {
   const isAdmin = user?.role === 'admin';
@@ -38,26 +35,16 @@ export function TopHeader({
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-[#D8DEE8] h-16 px-4 sm:px-6 flex items-center justify-between shadow-2xs">
-      {/* Left: Sidebar Toggle + Breadcrumb */}
+      {/* Left: Mobile Drawer Trigger + Breadcrumb Title */}
       <div className="flex items-center gap-3">
-        {/* Mobile menu button */}
+        {/* Mobile menu button only (hidden on desktop) */}
         <button
           type="button"
           onClick={onOpenMobileSidebar}
           title="Open Menu"
           className="md:hidden p-2 rounded-xl text-[#5B6475] hover:text-[#172033] hover:bg-slate-100 transition cursor-pointer"
         >
-          <PanelLeft className="w-5 h-5" />
-        </button>
-
-        {/* Desktop sidebar toggle [ | ] */}
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-          className="hidden md:flex p-2 rounded-xl text-[#5B6475] hover:text-[#172033] hover:bg-slate-100 transition cursor-pointer"
-        >
-          <PanelLeft className="w-5 h-5" />
+          <Menu className="w-5 h-5" />
         </button>
 
         {/* Breadcrumb Title */}
