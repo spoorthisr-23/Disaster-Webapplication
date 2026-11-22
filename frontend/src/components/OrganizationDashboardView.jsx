@@ -25,7 +25,11 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-export function OrganizationDashboardView({ onNavigate }) {
+export function OrganizationDashboardView({
+  onNavigate,
+  activeSection: propActiveSection,
+  setActiveSection: propSetActiveSection,
+}) {
   const [currentUser] = useState(() => {
     try {
       const stored = localStorage.getItem('auth_user');
@@ -46,7 +50,9 @@ export function OrganizationDashboardView({ onNavigate }) {
     }
   });
 
-  const [activeSection, setActiveSection] = useState('overview');
+  const [localActiveSection, setLocalActiveSection] = useState('overview');
+  const activeSection = propActiveSection || localActiveSection;
+  const setActiveSection = propSetActiveSection || setLocalActiveSection;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -419,47 +425,16 @@ export function OrganizationDashboardView({ onNavigate }) {
               <span>{refreshing ? 'Syncing...' : 'Sync Telemetry'}</span>
             </button>
             <button
-              onClick={() => setActiveSection('all')}
+              onClick={() => setActiveSection(activeSection === 'all' ? 'overview' : 'all')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
                 activeSection === 'all'
                   ? 'bg-blue-50 border-blue-200 text-blue-700'
                   : 'bg-white border-[#D8DEE8] text-[#5B6475] hover:text-[#172033]'
               }`}
             >
-              View Full Report
+              {activeSection === 'all' ? 'Section View' : 'View Full Report'}
             </button>
           </div>
-        </div>
-
-        {/* Section Navigation Tabs / Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-1 -mb-1">
-          {sidebarLinks.map((link) => {
-            const Icon = link.icon;
-            const isActive = activeSection === link.id;
-            return (
-              <button
-                key={link.id}
-                onClick={() => setActiveSection(link.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-[#5B6475] hover:text-[#172033] hover:bg-slate-100 bg-slate-50 border border-slate-200/60'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#5B6475]'}`} />
-                <span>{link.label}</span>
-                {link.badge && (
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-[#172033]'
-                    }`}
-                  >
-                    {link.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   LayoutDashboard,
   Building2,
@@ -14,6 +14,8 @@ import {
   LogIn,
   ShieldCheck,
   X,
+  ChevronDown,
+  Activity,
 } from 'lucide-react';
 
 export function Sidebar({
@@ -24,9 +26,24 @@ export function Sidebar({
   onOpenLogin,
   isMobileOpen,
   setIsMobileOpen,
+  orgActiveSection = 'overview',
+  setOrgActiveSection,
 }) {
   const isAdmin = user?.role === 'admin';
   const isOrg = user?.role === 'organization';
+
+  // State to expand/collapse nested sub-attributes under Organization Command Hub
+  const [isOrgExpanded, setIsOrgExpanded] = useState(true);
+
+  // Nested attributes inside Organization Command Hub
+  const orgSubItems = [
+    { id: 'overview', label: 'Main Overview', icon: LayoutDashboard },
+    { id: 'shelters', label: 'Shelter Capacity Requests', icon: Home, badge: '585 free' },
+    { id: 'inventory', label: 'Resource Inventory', icon: Package },
+    { id: 'volunteers', label: 'Volunteer Roster', icon: HeartHandshake, badge: '2' },
+    { id: 'distributions', label: 'Distribution Ledger', icon: Share2 },
+    { id: 'activities', label: 'Recent Activities', icon: Activity },
+  ];
 
   // Section-based navigation items
   const orgNavGroups = [
@@ -155,6 +172,7 @@ export function Sidebar({
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
 
+                // 1. Citizen SOS button (distinct emergency styling)
                 if (item.isSos) {
                   return (
                     <button
@@ -173,6 +191,85 @@ export function Sidebar({
                   );
                 }
 
+                // 2. Organization Command Hub with NESTED ATTRIBUTES
+                if (item.id === 'organization') {
+                  return (
+                    <div key={item.id} className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSelect('organization');
+                          setIsOrgExpanded((prev) => !prev);
+                        }}
+                        title={item.label}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'text-[#5B6475] hover:text-[#172033] hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-[#5B6475]'}`} />
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                            isOrgExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {/* Nested Attributes inside Organization Command Hub */}
+                      {isOrgExpanded && (
+                        <div className="pl-3 pr-1 py-1 space-y-1 border-l-2 border-blue-100 ml-4 my-1">
+                          {orgSubItems.map((sub) => {
+                            const SubIcon = sub.icon;
+                            const isSubActive = activeTab === 'organization' && orgActiveSection === sub.id;
+
+                            return (
+                              <button
+                                key={sub.id}
+                                type="button"
+                                onClick={() => {
+                                  setActiveTab('organization');
+                                  if (setOrgActiveSection) {
+                                    setOrgActiveSection(sub.id);
+                                  }
+                                  if (isMobileOpen && setIsMobileOpen) {
+                                    setIsMobileOpen(false);
+                                  }
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+                                  isSubActive
+                                    ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
+                                    : 'text-[#5B6475] hover:text-[#172033] hover:bg-slate-50 font-medium'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-blue-600' : 'text-[#5B6475]'}`} />
+                                  <span className="truncate">{sub.label}</span>
+                                </div>
+                                {sub.badge && (
+                                  <span
+                                    className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                                      isSubActive
+                                        ? 'bg-blue-200/80 text-blue-900'
+                                        : 'bg-slate-100 text-[#5B6475]'
+                                    }`}
+                                  >
+                                    {sub.badge}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // 3. Standard Navigation Item
                 return (
                   <button
                     key={item.id}

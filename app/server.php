@@ -706,8 +706,20 @@ if (strpos($uri, '/api') === 0) {
         echo json_encode($sel->fetch());
         exit;
     }
-    if ($uri === '/api/shelters') {
-        echo json_encode($pdo->query("SELECT s.*, s.shelter_id as id FROM shelters s ORDER BY s.shelter_id ASC")->fetchAll());
+    if (preg_match('#^/api/shelters/?$#', $uri)) {
+        try {
+            $stmt = $pdo->query("SELECT s.*, s.shelter_id as id FROM shelters s ORDER BY s.shelter_id ASC");
+            echo json_encode($stmt->fetchAll());
+        } catch (\Throwable $e) {
+            try {
+                $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, $opts);
+                $stmt = $pdo->query("SELECT s.*, s.shelter_id as id FROM shelters s ORDER BY s.shelter_id ASC");
+                echo json_encode($stmt->fetchAll());
+            } catch (\Throwable $e2) {
+                http_response_code(200);
+                echo json_encode([]);
+            }
+        }
         exit;
     }
 
@@ -756,16 +768,46 @@ if (strpos($uri, '/api') === 0) {
         echo json_encode($sel->fetch());
         exit;
     }
-    if ($uri === '/api/volunteers') {
-        echo json_encode($pdo->query("SELECT v.*, v.volunteer_id as id FROM volunteers v ORDER BY v.volunteer_id ASC")->fetchAll());
+    if (preg_match('#^/api/volunteers/?$#', $uri)) {
+        try {
+            echo json_encode($pdo->query("SELECT v.*, v.volunteer_id as id FROM volunteers v ORDER BY v.volunteer_id ASC")->fetchAll());
+        } catch (\Throwable $e) {
+            try {
+                $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, $opts);
+                echo json_encode($pdo->query("SELECT v.*, v.volunteer_id as id FROM volunteers v ORDER BY v.volunteer_id ASC")->fetchAll());
+            } catch (\Throwable $e2) {
+                http_response_code(200);
+                echo json_encode([]);
+            }
+        }
         exit;
     }
-    if ($uri === '/api/distributions') {
-        echo json_encode($pdo->query("SELECT d.*, r.item_name FROM distributions d LEFT JOIN resources r ON d.resource_id = r.resource_id ORDER BY d.distribution_id DESC")->fetchAll());
+    if (preg_match('#^/api/distributions/?$#', $uri)) {
+        try {
+            echo json_encode($pdo->query("SELECT d.*, r.item_name FROM distributions d LEFT JOIN resources r ON d.resource_id = r.resource_id ORDER BY d.distribution_id DESC")->fetchAll());
+        } catch (\Throwable $e) {
+            try {
+                $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, $opts);
+                echo json_encode($pdo->query("SELECT d.*, r.item_name FROM distributions d LEFT JOIN resources r ON d.resource_id = r.resource_id ORDER BY d.distribution_id DESC")->fetchAll());
+            } catch (\Throwable $e2) {
+                http_response_code(200);
+                echo json_encode([]);
+            }
+        }
         exit;
     }
-    if ($uri === '/api/organizations') {
-        echo json_encode($pdo->query("SELECT * FROM organizations ORDER BY id DESC")->fetchAll());
+    if (preg_match('#^/api/organizations/?$#', $uri)) {
+        try {
+            echo json_encode($pdo->query("SELECT * FROM organizations ORDER BY id DESC")->fetchAll());
+        } catch (\Throwable $e) {
+            try {
+                $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, $opts);
+                echo json_encode($pdo->query("SELECT * FROM organizations ORDER BY id DESC")->fetchAll());
+            } catch (\Throwable $e2) {
+                http_response_code(200);
+                echo json_encode([]);
+            }
+        }
         exit;
     }
     if ($uri === '/api/me') {

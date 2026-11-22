@@ -33,6 +33,7 @@ export function App() {
     }
   });
 
+  const [orgActiveSection, setOrgActiveSection] = useState('overview');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [isAuthView, setIsAuthView] = useState(() => {
@@ -113,6 +114,8 @@ export function App() {
         onOpenLogin={handleOpenLogin}
         isMobileOpen={isMobileSidebarOpen}
         setIsMobileOpen={setIsMobileSidebarOpen}
+        orgActiveSection={orgActiveSection}
+        setOrgActiveSection={setOrgActiveSection}
       />
 
       {/* 2. Main Content Viewport */}
@@ -128,7 +131,13 @@ export function App() {
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {activeTab === 'dashboard' && <DashboardView onNavigate={setActiveTab} />}
           {activeTab === 'citizen' && <CitizenPortalView onNavigate={setActiveTab} />}
-          {activeTab === 'organization' && <OrganizationDashboardView onNavigate={setActiveTab} />}
+          {activeTab === 'organization' && (
+            <OrganizationDashboardView
+              onNavigate={setActiveTab}
+              activeSection={orgActiveSection}
+              setActiveSection={setOrgActiveSection}
+            />
+          )}
           {activeTab === 'events' && <DisasterEventsView />}
           {activeTab === 'requests' && <EmergencyRequestsView />}
           {activeTab === 'incidents' && <IncidentReportsView />}
