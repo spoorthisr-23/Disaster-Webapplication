@@ -300,6 +300,46 @@ if (strpos($uri, '/api') === 0) {
             ];
         }
 
+        $cap = (int) array_sum(array_column($shelters, 'capacity'));
+        $occ = (int) array_sum(array_column($shelters, 'current_occupancy'));
+        $availSpaces = max(0, $cap - $occ);
+        $fullCamps = count(array_filter($shelters, fn($s) => strtoupper($s['status']) === 'FULL' || (int) ($s['current_occupancy'] ?? 0) >= (int) ($s['capacity'] ?? 0)));
+
+        $campsAndShelters = [
+            'total_camps' => count($shelters),
+            'total_capacity' => $cap,
+            'current_occupancy' => $occ,
+            'available_spaces' => $availSpaces,
+            'full_camps' => $fullCamps,
+            'shelters' => $shelters,
+            'facilities' => $shelters,
+        ];
+
+        $volunteerSummary = [
+            'total' => count($volunteers),
+            'total_registered' => count($volunteers),
+            'available' => count(array_filter($volunteers, fn($v) => !empty($v['is_available']))),
+            'active_count' => $activeVolunteers,
+            'assigned' => count(array_filter($volunteers, fn($v) => ($v['assignment_status'] ?? '') === 'assigned')),
+            'assigned_count' => count(array_filter($volunteers, fn($v) => ($v['assignment_status'] ?? '') === 'assigned')),
+            'on_duty' => count(array_filter($volunteers, fn($v) => ($v['assignment_status'] ?? '') === 'on_duty')),
+            'on_duty_count' => count(array_filter($volunteers, fn($v) => ($v['assignment_status'] ?? '') === 'on_duty')),
+            'roster' => $volunteers,
+        ];
+
+        $distributionSummary = [
+            'total_distributions' => count($distributions),
+            'total_dispatches' => count($distributions),
+            'pending_deliveries' => count(array_filter($distributions, fn($d) => $d['delivery_status'] === 'pending')),
+            'pending_dispatches' => count(array_filter($distributions, fn($d) => $d['delivery_status'] === 'pending')),
+            'in_progress_deliveries' => count(array_filter($distributions, fn($d) => $d['delivery_status'] === 'in_progress')),
+            'in_progress_dispatches' => count(array_filter($distributions, fn($d) => $d['delivery_status'] === 'in_progress')),
+            'completed_deliveries' => count(array_filter($distributions, fn($d) => $d['delivery_status'] === 'completed')),
+            'completed_dispatches' => count(array_filter($distributions, fn($d) => $d['delivery_status'] === 'completed')),
+            'ledger' => $distributions,
+            'recent_ledger' => $distributions,
+        ];
+
         echo json_encode([
             'organization' => [
                 'id' => (int) $org['id'],
@@ -332,28 +372,11 @@ if (strpos($uri, '/api') === 0) {
                 'out_of_stock_items' => $outOfStock,
                 'all_items' => $resources,
             ],
-            'volunteers' => [
-                'total_registered' => count($volunteers),
-                'active_count' => $activeVolunteers,
-                'assigned_count' => count(array_filter($volunteers, fn($v) => ($v['assignment_status'] ?? '') === 'assigned')),
-                'on_duty_count' => count(array_filter($volunteers, fn($v) => ($v['assignment_status'] ?? '') === 'on_duty')),
-                'roster' => $volunteers,
-            ],
-            'shelters' => [
-                'total_managed' => count($shelters),
-                'open_count' => count(array_filter($shelters, fn($s) => strtoupper($s['status']) === 'OPEN')),
-                'full_count' => count(array_filter($shelters, fn($s) => strtoupper($s['status']) === 'FULL')),
-                'total_capacity' => (int) array_sum(array_column($shelters, 'capacity')),
-                'total_occupancy' => (int) array_sum(array_column($shelters, 'current_occupancy')),
-                'facilities' => $shelters,
-            ],
-            'distributions' => [
-                'total_dispatches' => count($distributions),
-                'pending_dispatches' => count(array_filter($distributions, fn($d) => $d['delivery_status'] === 'pending')),
-                'in_progress_dispatches' => count(array_filter($distributions, fn($d) => $d['delivery_status'] === 'in_progress')),
-                'completed_dispatches' => count(array_filter($distributions, fn($d) => $d['delivery_status'] === 'completed')),
-                'ledger' => $distributions,
-            ],
+            'volunteers' => $volunteerSummary,
+            'camps_and_shelters' => $campsAndShelters,
+            'shelters' => $campsAndShelters,
+            'distributions' => $distributionSummary,
+            'recent_activities' => $activities,
             'recent_activity' => $activities,
         ]);
         exit;

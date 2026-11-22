@@ -268,13 +268,32 @@ export function OrganizationDashboardView({ onNavigate }) {
     );
   }
 
-  const { organization, statistics, inventory, volunteers, camps_and_shelters, distributions, recent_activities } = dashboardData;
+  const organization = dashboardData?.organization || {};
+  const statistics = dashboardData?.statistics || {};
+  const inventory = dashboardData?.inventory || { low_stock_count: 0, all_items: [] };
+  const volunteers = dashboardData?.volunteers || { available: 0, total: 0, roster: [] };
+  const camps_and_shelters = dashboardData?.camps_and_shelters || dashboardData?.shelters || {
+    total_camps: 0,
+    total_capacity: 0,
+    current_occupancy: 0,
+    available_spaces: 0,
+    full_camps: 0,
+    shelters: [],
+  };
+  const distributions = dashboardData?.distributions || {
+    total_distributions: 0,
+    pending_deliveries: 0,
+    in_progress_deliveries: 0,
+    completed_deliveries: 0,
+    recent_ledger: [],
+  };
+  const recent_activities = dashboardData?.recent_activities || dashboardData?.recent_activity || [];
 
   const sidebarLinks = [
     { id: 'overview', label: 'Main Overview', icon: LayoutDashboard },
-    { id: 'inventory', label: 'Resource Inventory', icon: Package, badge: inventory.low_stock_count > 0 ? `${inventory.low_stock_count} low` : null },
-    { id: 'volunteers', label: 'Volunteer Roster', icon: HeartHandshake, badge: volunteers.available },
-    { id: 'camps', label: 'Camps & Shelters', icon: Home, badge: `${camps_and_shelters.available_spaces} spots` },
+    { id: 'inventory', label: 'Resource Inventory', icon: Package, badge: (inventory?.low_stock_count ?? 0) > 0 ? `${inventory.low_stock_count} low` : null },
+    { id: 'volunteers', label: 'Volunteer Roster', icon: HeartHandshake, badge: volunteers?.available ?? 0 },
+    { id: 'camps', label: 'Camps & Shelters', icon: Home, badge: `${camps_and_shelters?.available_spaces ?? 0} spots` },
     { id: 'distributions', label: 'Distribution Ledger', icon: Share2 },
     { id: 'activities', label: 'Recent Activities', icon: Activity },
   ];
