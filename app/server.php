@@ -516,21 +516,6 @@ if (strpos($uri, '/api') === 0) {
         exit;
     }
 
-    // =========================================================================
-    // PUT /api/organization/emergency-requests/{id}/status
-    // =========================================================================
-    if (preg_match('#^/api/organization/emergency-requests/(\d+)/status$#', $uri, $matches) && $method === 'PUT') {
-        $reqId = (int) $matches[1];
-        $newStatus = trim($input['status'] ?? 'in_progress');
-
-        $up = $pdo->prepare("UPDATE emergency_requests SET status = ?, updated_at = NOW() WHERE id = ?");
-        $up->execute([$newStatus, $reqId]);
-
-        $stmt = $pdo->prepare("SELECT * FROM emergency_requests WHERE id = ?");
-        $stmt->execute([$reqId]);
-        echo json_encode(['message' => 'Emergency request status updated.', 'request' => $stmt->fetch()]);
-        exit;
-    }
 
     // =========================================================================
     // Standard Entity Endpoints

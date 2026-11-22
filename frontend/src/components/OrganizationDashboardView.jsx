@@ -73,7 +73,6 @@ export function OrganizationDashboardView({ onNavigate }) {
   });
   const [savingNewResource, setSavingNewResource] = useState(false);
 
-  const [updatingSosId, setUpdatingSosId] = useState(null);
   const [sosFilter, setSosFilter] = useState('all');
 
   const [showDispatchModal, setShowDispatchModal] = useState(false);
@@ -187,19 +186,6 @@ export function OrganizationDashboardView({ onNavigate }) {
     }
   };
 
-  // Handle update emergency request status
-  const handleUpdateSosStatus = async (id, newStatus) => {
-    setUpdatingSosId(id);
-    try {
-      await api.updateEmergencyRequestStatus(id, newStatus);
-      await loadDashboard();
-    } catch (err) {
-      alert(err.message || 'Failed to update emergency request status');
-    } finally {
-      setUpdatingSosId(null);
-    }
-  };
-
   const handleOpenDispatchForRequest = (req) => {
     setDispatchData((prev) => ({
       ...prev,
@@ -299,9 +285,9 @@ export function OrganizationDashboardView({ onNavigate }) {
     { id: 'overview', label: 'Main Overview', icon: LayoutDashboard },
     { 
       id: 'requests', 
-      label: 'Citizen SOS Queue', 
+      label: 'Citizen Distress Feed', 
       icon: AlertTriangle, 
-      badge: pendingSosCount > 0 ? `${pendingSosCount} pending` : null 
+      badge: pendingSosCount > 0 ? `${pendingSosCount} active` : null 
     },
     { id: 'inventory', label: 'Resource Inventory', icon: Package, badge: (inventory?.low_stock_count ?? 0) > 0 ? `${inventory.low_stock_count} low` : null },
     { id: 'volunteers', label: 'Volunteer Roster', icon: HeartHandshake, badge: volunteers?.available ?? 0 },
@@ -310,8 +296,8 @@ export function OrganizationDashboardView({ onNavigate }) {
   ];
 
   const statCards = [
-    { label: 'Total Emergency Requests', value: statistics.total_emergency_requests, sub: 'Assigned to organization', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
-    { label: 'Pending Requests', value: statistics.pending_requests, sub: 'Awaiting field action', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Incoming Distress Calls', value: statistics.total_emergency_requests, sub: 'Regional situational feed', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Pending Response', value: statistics.pending_requests, sub: 'Active in district', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'Active Operations', value: statistics.active_operations, sub: 'Approved dispatches & on-duty', icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Completed Requests', value: statistics.completed_requests, sub: 'Fulfilled & resolved', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Available Resources', value: statistics.available_resources.toLocaleString(), sub: 'Warehouse units in stock', icon: Box, color: 'text-teal-600', bg: 'bg-teal-50' },
@@ -515,14 +501,14 @@ export function OrganizationDashboardView({ onNavigate }) {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse" />
                     <h3 className="text-xs font-bold text-[#172033] uppercase tracking-wider">
-                      Priority Distress Signals ({pendingSosCount} Pending)
+                      Live Citizen Distress Feed ({pendingSosCount} Active)
                     </h3>
                   </div>
                   <button
                     onClick={() => setActiveSection('requests')}
                     className="text-xs font-semibold text-[#1D4ED8] hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <span>View SOS Queue</span>
+                    <span>View Distress Feed</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -530,7 +516,7 @@ export function OrganizationDashboardView({ onNavigate }) {
                 {emergencyRequests.filter((r) => r.status === 'pending' || r.status === 'new').length === 0 ? (
                   <div className="py-4 text-center text-xs text-[#5B6475] flex items-center justify-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>No pending emergency distress calls awaiting dispatch.</span>
+                    <span>No active citizen emergency distress calls reported in area.</span>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -546,13 +532,9 @@ export function OrganizationDashboardView({ onNavigate }) {
                             </div>
                             <p className="text-[11px] text-[#5B6475] truncate mt-0.5">{req.location_name || 'Field site'} • {req.people_affected || 1} people</p>
                           </div>
-                          <button
-                            onClick={() => handleUpdateSosStatus(req.id, 'in_progress')}
-                            disabled={updatingSosId === req.id}
-                            className="shrink-0 px-2.5 py-1 rounded bg-[#1D4ED8] hover:bg-[#1E40AF] text-white text-[11px] font-semibold transition cursor-pointer"
-                          >
-                            Dispatch
-                          </button>
+                          <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-100 text-rose-800 border border-rose-200">
+                            {req.status || 'PENDING'}
+                          </span>
                         </div>
                       ))}
                   </div>
@@ -601,17 +583,17 @@ export function OrganizationDashboardView({ onNavigate }) {
           </section>
         )}
 
-        {/* 2. CITIZEN SOS & EMERGENCY TRIAGE QUEUE */}
+        {/* 2. CITIZEN SOS DISTRESS FEED (READ-ONLY) */}
         {(activeSection === 'requests' || activeSection === 'all') && (
           <section className="bg-white rounded-2xl border border-[#D8DEE8] p-6 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-gray-100">
               <div>
                 <h2 className="text-base font-bold text-[#172033] flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-rose-600" />
-                  2. Citizen SOS &amp; Emergency Triage Queue
+                  2. Citizen SOS Distress Feed (Read-Only Situational View)
                 </h2>
                 <p className="text-xs text-[#5B6475] mt-0.5">
-                  Direct citizen distress signals awaiting NGO response, volunteer dispatch, or relief allocation in {organization.area}.
+                  Live emergency distress signals from citizens in {organization.area}. Strictly read-only for field logistics and aid preparation.
                 </p>
               </div>
 
@@ -630,6 +612,14 @@ export function OrganizationDashboardView({ onNavigate }) {
                     {tab.replace('_', ' ')}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Read-Only Informational Alert Box */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-3 text-xs text-[#5B6475]">
+              <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-[#172033]">Strict Read-Only Situational Awareness:</span> Organizations monitor this distress feed to anticipate supply and medical needs. Citizen tracking status, responder dispatch, and completion are controlled strictly by citizens and emergency incident command. Organizations cannot modify citizen tickets or alter live tracking.
               </div>
             </div>
 
@@ -747,38 +737,19 @@ export function OrganizationDashboardView({ onNavigate }) {
                           </p>
                         </div>
 
-                        {/* Action Buttons Toolbar */}
+                        {/* Action Buttons Toolbar (Read-Only Signal Feed) */}
                         <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 text-xs">
                           <button
                             onClick={() => handleOpenDispatchForRequest(req)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold transition cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold transition cursor-pointer"
                           >
                             <Truck className="w-3.5 h-3.5" />
-                            <span>Log Aid Delivery</span>
+                            <span>Log Supply Dispatch</span>
                           </button>
 
-                          <div className="flex items-center gap-1.5">
-                            {isPending && (
-                              <button
-                                disabled={updatingSosId === req.id}
-                                onClick={() => handleUpdateSosStatus(req.id, 'in_progress')}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1D4ED8] hover:bg-[#1E40AF] text-white font-semibold transition cursor-pointer disabled:opacity-50"
-                              >
-                                {updatingSosId === req.id ? 'Updating...' : 'Dispatch Team'}
-                              </button>
-                            )}
-
-                            {!isCompleted && (
-                              <button
-                                disabled={updatingSosId === req.id}
-                                onClick={() => handleUpdateSosStatus(req.id, 'completed')}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition cursor-pointer disabled:opacity-50"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Mark Safe</span>
-                              </button>
-                            )}
-                          </div>
+                          <span className="text-[11px] text-[#5B6475] italic">
+                            Live Tracking: <strong className="text-[#172033] capitalize">{req.status || 'Active'}</strong>
+                          </span>
                         </div>
                       </div>
                     );

@@ -11,15 +11,15 @@ import {
 } from 'lucide-react';
 
 export function LoginView({ onLoginSuccess, onCancel }) {
-  const [email, setEmail] = useState('coordinator@redcross.org');
-  const [password, setPassword] = useState('Redcross@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  const handleQuickFill = (fillEmail, fillPass) => {
+  const handleQuickFill = (fillEmail) => {
     setEmail(fillEmail);
-    setPassword(fillPass);
+    setPassword('');
     setError(null);
   };
 
@@ -168,27 +168,27 @@ export function LoginView({ onLoginSuccess, onCancel }) {
           </button>
         </form>
 
-        {/* Quick Fill Demo Credentials */}
+        {/* Quick Fill Demo Email */}
         <div className="mt-6 pt-5 border-t border-gray-100">
           <p className="text-[11px] font-semibold text-[#5B6475] mb-2.5 text-center">
-            One-Click Demo Accounts:
+            Select Role Email (Enter assigned password):
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => handleQuickFill('coordinator@redcross.org', 'Redcross@123')}
-              className="p-2 text-xs rounded-xl border border-blue-300 bg-blue-50/60 hover:bg-blue-100/70 text-blue-800 font-semibold transition text-left cursor-pointer flex items-center gap-1.5"
+              onClick={() => handleQuickFill('coordinator@redcross.org')}
+              className="p-2 text-xs rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 text-blue-800 font-semibold transition text-left cursor-pointer flex items-center gap-1.5"
             >
               <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <div className="truncate">
                 <div className="font-bold text-[11px]">🏥 Red Cross</div>
-                <div className="text-[10px] text-blue-600/80 truncate">Coordinator</div>
+                <div className="text-[10px] text-blue-600/80 truncate">Field Coordinator</div>
               </div>
             </button>
 
             <button
               type="button"
-              onClick={() => handleQuickFill('admin@disaster-relief.org', 'Admin@123')}
+              onClick={() => handleQuickFill('admin@disaster-relief.org')}
               className="p-2 text-xs rounded-xl border border-gray-200 hover:bg-gray-50 text-[#172033] font-medium transition text-left cursor-pointer flex items-center gap-1.5"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-gray-500 shrink-0" />
