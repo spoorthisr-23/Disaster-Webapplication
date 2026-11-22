@@ -9,6 +9,7 @@ import { DistributionsView } from './components/DistributionsView';
 import { SheltersView } from './components/SheltersView';
 import { VolunteersView } from './components/VolunteersView';
 import { OrganizationDashboardView } from './components/OrganizationDashboardView';
+import { CitizenPortalView } from './components/CitizenPortalView';
 import { LoginView } from './components/LoginView';
 
 export function App() {
@@ -110,6 +111,7 @@ export function App() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'dashboard' && <DashboardView onNavigate={setActiveTab} />}
+        {activeTab === 'citizen' && <CitizenPortalView onNavigate={setActiveTab} />}
         {activeTab === 'organization' && <OrganizationDashboardView onNavigate={setActiveTab} />}
         {activeTab === 'events' && <DisasterEventsView />}
         {activeTab === 'requests' && <EmergencyRequestsView />}

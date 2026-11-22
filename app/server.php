@@ -514,16 +514,52 @@ if (strpos($uri, '/api') === 0) {
         echo json_encode($pdo->query("SELECT * FROM disaster_events ORDER BY id DESC")->fetchAll());
         exit;
     }
+    if ($uri === '/api/emergency-requests' && $method === 'POST') {
+        $reqType = trim($input['request_type'] ?? 'rescue');
+        $desc = trim($input['description'] ?? '');
+        $loc = trim($input['location_name'] ?? 'Coordinates Provided');
+        $people = max(1, (int) ($input['people_affected'] ?? 1));
+        $priority = trim($input['priority'] ?? 'high');
+        $name = trim($input['requester_name'] ?? 'Citizen (Distress Call)');
+        $phone = trim($input['requester_phone'] ?? '');
+        $disasterId = (int) ($input['disaster_event_id'] ?? 1);
+
+        // Auto-generate high-visibility tracking code
+        $code = 'REQ-2026-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
+
+        $ins = $pdo->prepare("INSERT INTO emergency_requests (request_number, disaster_event_id, request_type, description, location_name, people_affected, priority, status, requester_name, requester_phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, NOW(), NOW())");
+        $ins->execute([$code, $disasterId, $reqType, $desc, $loc, $people, $priority, $name, $phone]);
+        $newId = $pdo->lastInsertId();
+
+        $stmt = $pdo->prepare("SELECT * FROM emergency_requests WHERE id = ?");
+        $stmt->execute([$newId]);
+        $created = $stmt->fetch();
+
+        http_response_code(201);
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Emergency SOS distress ticket created successfully.',
+            'tracking_code' => $code,
+            'request' => $created
+        ]);
+        exit;
+    }
     if ($uri === '/api/emergency-requests') {
         echo json_encode($pdo->query("SELECT * FROM emergency_requests ORDER BY id DESC")->fetchAll());
         exit;
     }
     if (preg_match('#^/api/emergency-requests/track/([A-Za-z0-9\-]+)$#', $uri, $m)) {
         $code = trim($m[1]);
-        $stmt = $pdo->prepare("SELECT * FROM emergency_requests WHERE request_number = ? OR id = ? LIMIT 1");
+        $stmt = $pdo->prepare("SELECT e.*, d.title as disaster_title, s.shelter_name, s.location as shelter_location FROM emergency_requests e LEFT JOIN disaster_events d ON e.disaster_event_id = d.id LEFT JOIN shelters s ON e.shelter_id = s.id WHERE e.request_number = ? OR e.id = ? LIMIT 1");
         $stmt->execute([$code, (int) $code]);
         $req = $stmt->fetch();
         if ($req) {
+            $status = strtolower($req['status'] ?? 'pending');
+            $step = 1;
+            if ($status === 'verified') $step = 2;
+            elseif (in_array($status, ['in_progress', 'dispatched', 'assigned'])) $step = 3;
+            elseif (in_array($status, ['completed', 'resolved', 'closed'])) $step = 4;
+            $req['current_step'] = $step;
             echo json_encode(['status' => 'success', 'data' => $req]);
         } else {
             http_response_code(404);

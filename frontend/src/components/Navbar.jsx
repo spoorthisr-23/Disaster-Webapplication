@@ -12,7 +12,8 @@ import {
   LogOut,
   Building2,
   ShieldCheck,
-  LogIn
+  LogIn,
+  AlertOctagon
 } from 'lucide-react';
 
 export function Navbar({ activeTab, setActiveTab, user: propUser, onLogout, onOpenLogin }) {
@@ -60,6 +61,7 @@ export function Navbar({ activeTab, setActiveTab, user: propUser, onLogout, onOp
 
   const navItems = [
     { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard },
+    { id: 'citizen', label: 'Citizen SOS & Tracking', icon: AlertOctagon, isSos: true },
     { id: 'organization', label: 'Organization Portal', icon: Building2 },
     { id: 'events', label: 'Disaster Events', icon: ShieldAlert },
     { id: 'requests', label: 'Emergency Requests', icon: AlertTriangle },
@@ -153,10 +155,28 @@ export function Navbar({ activeTab, setActiveTab, user: propUser, onLogout, onOp
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="flex space-x-1 overflow-x-auto border-t border-[#F1F5F9] pt-1 -mb-px">
+        <nav className="flex space-x-1 overflow-x-auto border-t border-[#F1F5F9] pt-1 -mb-px items-center">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+            
+            if (item.isSos) {
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 my-1 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 ring-2 ring-rose-500/20'
+                      : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-rose-600 animate-pulse'}`} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            }
+
             return (
               <button
                 key={item.id}
