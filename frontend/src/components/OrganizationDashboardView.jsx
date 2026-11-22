@@ -26,6 +26,26 @@ import {
 } from 'lucide-react';
 
 export function OrganizationDashboardView({ onNavigate }) {
+  const [currentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('auth_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [availableOrgs, setAvailableOrgs] = useState([]);
+  const [selectedOrgId, setSelectedOrgId] = useState(() => {
+    try {
+      const stored = localStorage.getItem('auth_user');
+      const u = stored ? JSON.parse(stored) : null;
+      return u?.organization_id || 1;
+    } catch {
+      return 1;
+    }
+  });
+
   const [activeSection, setActiveSection] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,10 +89,10 @@ export function OrganizationDashboardView({ onNavigate }) {
   const [savingDispatch, setSavingDispatch] = useState(false);
 
   // Fetch live dashboard telemetry
-  const loadDashboard = async () => {
+  const loadDashboard = async (orgId = selectedOrgId) => {
     try {
       setError(null);
-      const data = await api.getOrganizationDashboard();
+      const data = await api.getOrganizationDashboard(orgId);
       setDashboardData(data);
     } catch (err) {
       console.error('Failed to load organization dashboard:', err);
@@ -84,8 +104,15 @@ export function OrganizationDashboardView({ onNavigate }) {
   };
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    if (currentUser?.role === 'admin') {
+      api.getOrganizations().then((orgs) => {
+        if (Array.isArray(orgs) && orgs.length > 0) {
+          setAvailableOrgs(orgs);
+        }
+      }).catch(() => {});
+    }
+    loadDashboard(selectedOrgId);
+  }, [selectedOrgId]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -264,10 +291,49 @@ export function OrganizationDashboardView({ onNavigate }) {
   ];
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 items-start">
-      {/* =====================================================================
-          260px LEFT SIDEBAR NAVIGATION MENU (as requested)
-          ===================================================================== */}
+    <div className="space-y-6">
+      {/* Admin Organization Switcher */}
+      {currentUser?.role === 'admin' && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              🛡️
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-blue-950">Administrator Command View</h4>
+              <p className="text-[11px] text-blue-700">Switch between registered relief organizations to monitor live capacity:</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="org-select" className="text-xs font-semibold text-blue-900 shrink-0">Active Hub:</label>
+            <select
+              id="org-select"
+              value={selectedOrgId}
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                setSelectedOrgId(id);
+                loadDashboard(id);
+              }}
+              className="bg-white border border-blue-300 text-blue-900 font-semibold rounded-xl px-3 py-1.5 text-xs shadow-xs focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer"
+            >
+              {availableOrgs.length > 0 ? (
+                availableOrgs.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    🏥 {org.name} ({org.type?.toUpperCase()})
+                  </option>
+                ))
+              ) : (
+                <option value={1}>🏥 International Red Cross Relief Hub (NGO)</option>
+              )}
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* =====================================================================
+            260px LEFT SIDEBAR NAVIGATION MENU (as requested)
+            ===================================================================== */}
       <aside className="w-full lg:w-[260px] lg:shrink-0 bg-white rounded-2xl border border-[#D8DEE8] p-4 shadow-xs sticky top-20">
         {/* Organization Brand Header */}
         <div className="pb-4 mb-4 border-b border-[#F1F5F9]">
@@ -1287,6 +1353,7 @@ export function OrganizationDashboardView({ onNavigate }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

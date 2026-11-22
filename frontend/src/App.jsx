@@ -8,14 +8,10 @@ import { ResourcesView } from './components/ResourcesView';
 import { DistributionsView } from './components/DistributionsView';
 import { SheltersView } from './components/SheltersView';
 import { VolunteersView } from './components/VolunteersView';
+import { OrganizationDashboardView } from './components/OrganizationDashboardView';
 import { LoginView } from './components/LoginView';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isAuthView, setIsAuthView] = useState(() => {
-    return window.location.pathname === '/login';
-  });
-
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem('auth_user');
@@ -23,6 +19,20 @@ export function App() {
     } catch {
       return null;
     }
+  });
+
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const stored = localStorage.getItem('auth_user');
+      const u = stored ? JSON.parse(stored) : null;
+      return u?.role === 'organization' ? 'organization' : 'dashboard';
+    } catch {
+      return 'dashboard';
+    }
+  });
+
+  const [isAuthView, setIsAuthView] = useState(() => {
+    return window.location.pathname === '/login';
   });
 
   // Listen to popstate for back/forward browser button navigation
@@ -48,7 +58,11 @@ export function App() {
     setUser(loggedInUser);
     setIsAuthView(false);
     window.history.pushState({}, '', '/');
-    setActiveTab('dashboard');
+    if (loggedInUser?.role === 'organization') {
+      setActiveTab('organization');
+    } else {
+      setActiveTab('dashboard');
+    }
   };
 
   const handleLogout = async () => {
@@ -96,6 +110,7 @@ export function App() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'dashboard' && <DashboardView onNavigate={setActiveTab} />}
+        {activeTab === 'organization' && <OrganizationDashboardView onNavigate={setActiveTab} />}
         {activeTab === 'events' && <DisasterEventsView />}
         {activeTab === 'requests' && <EmergencyRequestsView />}
         {activeTab === 'incidents' && <IncidentReportsView />}

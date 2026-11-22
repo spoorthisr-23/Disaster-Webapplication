@@ -60,6 +60,7 @@ export function Navbar({ activeTab, setActiveTab, user: propUser, onLogout, onOp
 
   const navItems = [
     { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard },
+    { id: 'organization', label: 'Organization Portal', icon: Building2 },
     { id: 'events', label: 'Disaster Events', icon: ShieldAlert },
     { id: 'requests', label: 'Emergency Requests', icon: AlertTriangle },
     { id: 'incidents', label: 'Incident Reports', icon: FileText },

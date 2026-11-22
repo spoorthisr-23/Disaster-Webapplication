@@ -79,7 +79,8 @@ export const api = {
   updateReliefRequest: (id, data) => request(`/relief-requests/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // 9. Organization Dashboard & Scoped Operations
-  getOrganizationDashboard: () => request('/organization/dashboard'),
+  getOrganizations: () => request('/organizations'),
+  getOrganizationDashboard: (orgId) => request(orgId ? `/organization/dashboard?organization_id=${orgId}` : '/organization/dashboard'),
   assignVolunteer: (id, data) => request(`/organization/volunteers/${id}/assign`, { method: 'POST', body: JSON.stringify(data) }),
   updateOrgResource: (id, data) => request(`/organization/resources/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   createOrgResource: (data) => request('/organization/resources', { method: 'POST', body: JSON.stringify(data) }),
