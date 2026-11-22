@@ -66,8 +66,27 @@ $sslVerifyKey = class_exists('\Pdo\Mysql') && defined('\Pdo\Mysql::ATTR_SSL_VERI
     ? \Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT
     : (defined('\PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT') ? constant('\PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT') : 1014);
 
-$caCandidate = getenv('MYSQL_ATTR_SSL_CA') ?: (__DIR__ . '/config/cacert.pem');
-$ca = file_exists($caCandidate) ? $caCandidate : (__DIR__ . '/config/cacert.pem');
+$caCandidatePaths = [
+    getenv('MYSQL_ATTR_SSL_CA') ?: null,
+    __DIR__ . '/config/cacert.pem',
+    __DIR__ . '/cacert.pem',
+    __DIR__ . '/public/cacert.pem',
+    '/app/config/cacert.pem',
+    '/app/cacert.pem',
+    'config/cacert.pem',
+    './config/cacert.pem',
+    'cacert.pem',
+];
+$ca = null;
+foreach ($caCandidatePaths as $candidate) {
+    if ($candidate && @file_exists($candidate) && @is_readable($candidate)) {
+        $ca = $candidate;
+        break;
+    }
+}
+if (!$ca) {
+    $ca = __DIR__ . '/config/cacert.pem';
+}
 
 $pdo = null;
 $opts = [
@@ -75,17 +94,32 @@ $opts = [
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     $sslCaKey => $ca,
     $sslVerifyKey => false,
+    PDO::ATTR_TIMEOUT => 8,
 ];
 
-try {
-    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, $opts);
-} catch (Exception $e) {
+// Retry connection up to 3 times to smoothly absorb TiDB Serverless cold starts
+$lastDbError = null;
+for ($connAttempt = 1; $connAttempt <= 3; $connAttempt++) {
+    try {
+        $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, $opts);
+        if ($pdo) {
+            break;
+        }
+    } catch (Exception $e) {
+        $lastDbError = $e->getMessage();
+        if ($connAttempt < 3) {
+            usleep(250000); // 250ms delay for auto-resuming cluster
+        }
+    }
+}
+
+if (!$pdo) {
     if (strpos($uri, '/api') === 0) {
         header('Content-Type: application/json; charset=UTF-8');
         http_response_code(500);
         echo json_encode([
-            'message' => 'Database connection failed: ' . $e->getMessage(),
-            'error' => $e->getMessage()
+            'message' => 'Database connection failed: ' . ($lastDbError ?? 'Connection failed'),
+            'error' => $lastDbError ?? 'Unable to connect to database'
         ]);
         exit(1);
     }
@@ -279,6 +313,11 @@ if (strpos($uri, '/api') === 0) {
         $dStmt->execute([$orgId]);
         $distributions = $dStmt->fetchAll();
 
+        // 6. Shelter Expansion / New Camp Requests submitted by this organization
+        $srStmt = $pdo->prepare("SELECT * FROM emergency_requests WHERE (request_type LIKE '%Shelter%' OR request_type = 'shelter_expansion' OR request_type = 'new_shelter_request') AND (organization_id = ? OR organization_id IS NULL) ORDER BY id DESC LIMIT 20");
+        $srStmt->execute([$orgId]);
+        $shelterRequests = $srStmt->fetchAll();
+
         // Inventory computations
         $foodPackets = (int) array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'Food') !== false || stripos($r['category'], 'Food') !== false || stripos($r['item_name'], 'MRE') !== false), 'quantity_available'));
         $waterBottles = (int) array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'Water') !== false || stripos($r['category'], 'Water') !== false), 'quantity_available'));
@@ -395,6 +434,7 @@ if (strpos($uri, '/api') === 0) {
             'volunteers' => $volunteerSummary,
             'camps_and_shelters' => $campsAndShelters,
             'shelters' => $campsAndShelters,
+            'shelter_requests' => $shelterRequests,
             'distributions' => $distributionSummary,
             'emergency_requests' => $requests,
             'recent_activities' => $activities,
@@ -513,6 +553,37 @@ if (strpos($uri, '/api') === 0) {
         $sel->execute([$distId]);
         http_response_code(201);
         echo json_encode(['message' => 'Distribution record registered.', 'distribution' => $sel->fetch()]);
+        exit;
+    }
+
+    // =========================================================================
+    // POST /api/organization/shelter-requests (Request New Shelter or Capacity)
+    // =========================================================================
+    if ($uri === '/api/organization/shelter-requests' && $method === 'POST') {
+        $user = authenticateUser($pdo);
+        $orgId = $user['organization_id'] ?? 1;
+
+        $type = trim($input['request_type'] ?? 'shelter_expansion');
+        $shelterId = !empty($input['shelter_id']) ? (int) $input['shelter_id'] : null;
+        $shelterName = trim($input['shelter_name'] ?? 'Evacuation Shelter');
+        $requestedCap = max(1, (int) ($input['requested_capacity'] ?? 50));
+        $area = trim($input['area'] ?? 'Coastal Sector');
+        $reason = trim($input['reason'] ?? 'Shelter capacity expansion requested for incoming evacuees.');
+        $contact = trim($input['contact_person'] ?? ($user['name'] ?? 'Red Cross Field Coordinator'));
+        $phone = trim($input['contact_phone'] ?? '+91 98765 43210');
+
+        $title = ($type === 'new_shelter_request')
+            ? "New Shelter Designation Request: $shelterName"
+            : "Shelter Capacity Expansion: $shelterName (+$requestedCap spaces)";
+
+        $ins = $pdo->prepare("INSERT INTO emergency_requests (disaster_event_id, request_type, description, location_name, shelter_id, people_affected, priority, requester_name, requester_phone, status, organization_id, created_at) VALUES (1, ?, ?, ?, ?, ?, 'high', ?, ?, 'pending_approval', ?, NOW())");
+        $ins->execute([$title, $reason, $area, $shelterId, $requestedCap, $contact, $phone, $orgId]);
+        $newId = $pdo->lastInsertId();
+
+        $sel = $pdo->prepare("SELECT * FROM emergency_requests WHERE id = ?");
+        $sel->execute([$newId]);
+        http_response_code(201);
+        echo json_encode(['message' => 'Shelter request submitted to Central Administration for review.', 'request' => $sel->fetch()]);
         exit;
     }
 

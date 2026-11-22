@@ -200,29 +200,31 @@ export function DashboardView({ onNavigate }) {
         </button>
       </div>
 
-      {/* Citizen Emergency SOS Banner */}
-      <div className="bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md shadow-rose-600/15">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
-            <span className="text-xl">🚨</span>
-          </div>
-          <div>
-            <div className="font-extrabold text-sm sm:text-base leading-tight">
-              Need Emergency Rescue or Tracking an Active SOS Request?
+      {/* Citizen Emergency SOS Banner (Hidden for Organization field workers) */}
+      {currentUser?.role !== 'organization' && (
+        <div className="bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md shadow-rose-600/15">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
+              <span className="text-xl">🚨</span>
             </div>
-            <div className="text-xs text-white/90 mt-0.5">
-              Rapid distress signal broadcasting &amp; real-time field responder telemetry. Zero login required.
+            <div>
+              <div className="font-extrabold text-sm sm:text-base leading-tight">
+                Need Emergency Rescue or Tracking an Active SOS Request?
+              </div>
+              <div className="text-xs text-white/90 mt-0.5">
+                Rapid distress signal broadcasting &amp; real-time field responder telemetry. Zero login required.
+              </div>
             </div>
           </div>
+          <button
+            onClick={() => onNavigate && onNavigate('citizen')}
+            className="px-4 py-2.5 bg-white text-rose-700 hover:bg-rose-50 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shrink-0 shadow-sm cursor-pointer"
+          >
+            <span>Launch Citizen SOS Portal</span>
+            <ArrowUpRight className="w-4 h-4" />
+          </button>
         </div>
-        <button
-          onClick={() => onNavigate && onNavigate('citizen')}
-          className="px-4 py-2.5 bg-white text-rose-700 hover:bg-rose-50 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shrink-0 shadow-sm cursor-pointer"
-        >
-          <span>Launch Citizen SOS Portal</span>
-          <ArrowUpRight className="w-4 h-4" />
-        </button>
-      </div>
+      )}
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">

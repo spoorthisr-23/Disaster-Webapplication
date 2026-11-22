@@ -85,6 +85,7 @@ export const api = {
   updateOrgResource: (id, data) => request(`/organization/resources/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   createOrgResource: (data) => request('/organization/resources', { method: 'POST', body: JSON.stringify(data) }),
   updateCampOccupancy: (id, data) => request(`/organization/shelters/${id}/occupancy`, { method: 'PUT', body: JSON.stringify(data) }),
+  requestShelterCapacity: (data) => request('/organization/shelter-requests', { method: 'POST', body: JSON.stringify(data) }),
   createDispatch: (data) => request('/organization/distributions', { method: 'POST', body: JSON.stringify(data) }),
 
   // 10. Auth Operations

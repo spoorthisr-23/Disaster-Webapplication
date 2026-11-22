@@ -59,7 +59,18 @@ export function Navbar({ activeTab, setActiveTab, user: propUser, onLogout, onOp
     }
   };
 
-  const navItems = [
+  const isAdmin = currentUser?.role === 'admin';
+  const isOrg = currentUser?.role === 'organization';
+
+  const navItems = isOrg ? [
+    { id: 'organization', label: 'Organization Command Hub', icon: Building2 },
+    { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard },
+    { id: 'resources', label: 'Resources & Warehouse', icon: Package },
+    { id: 'distributions', label: 'Distribution Ledger', icon: Share2 },
+    { id: 'shelters', label: 'Shelters Reference', icon: Home },
+    { id: 'volunteers', label: 'Volunteers', icon: HeartHandshake },
+    { id: 'events', label: 'Disaster Events', icon: ShieldAlert },
+  ] : [
     { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard },
     { id: 'citizen', label: 'Citizen SOS & Tracking', icon: AlertOctagon, isSos: true },
     { id: 'organization', label: 'Organization Portal', icon: Building2 },
@@ -71,9 +82,6 @@ export function Navbar({ activeTab, setActiveTab, user: propUser, onLogout, onOp
     { id: 'shelters', label: 'Shelters', icon: Home },
     { id: 'volunteers', label: 'Volunteers', icon: HeartHandshake },
   ];
-
-  const isAdmin = currentUser?.role === 'admin';
-  const isOrg = currentUser?.role === 'organization';
 
   return (
     <header className="bg-white border-b border-[#D8DEE8] sticky top-0 z-40 shadow-xs">
