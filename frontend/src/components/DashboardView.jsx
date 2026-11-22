@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import { StatusBadge } from './StatusBadge';
+import { OrganizationDashboardView } from './OrganizationDashboardView';
 import { 
   ShieldAlert, 
   AlertTriangle, 
@@ -14,6 +15,24 @@ import {
 } from 'lucide-react';
 
 export function DashboardView({ onNavigate }) {
+  const [currentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('auth_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem('auth_user');
+      const u = stored ? JSON.parse(stored) : null;
+      return u?.role === 'organization' ? 'organization' : 'global';
+    } catch {
+      return 'global';
+    }
+  });
   const [stats, setStats] = useState({
     eventsCount: 0,
     requestsPending: 0,
@@ -132,15 +151,45 @@ export function DashboardView({ onNavigate }) {
     },
   ];
 
+  if (viewMode === 'organization' || currentUser?.role === 'organization') {
+    return (
+      <div className="space-y-4">
+        {currentUser?.role === 'admin' && (
+          <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs">
+            <span className="font-semibold text-blue-900">
+              🛡️ Admin Mode: Inspecting Organization Field Portal
+            </span>
+            <button
+              onClick={() => setViewMode('global')}
+              className="px-3 py-1 bg-white border border-blue-300 text-blue-700 rounded-lg font-semibold hover:bg-blue-100 transition cursor-pointer"
+            >
+              Switch to Global Command
+            </button>
+          </div>
+        )}
+        <OrganizationDashboardView onNavigate={onNavigate} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Overview Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-[#172033]">Operations Command Center</h2>
-          <p className="text-sm text-[#5B6475]">
-            Real-time live telemetry querying MySQL database tables directly.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-[#172033]">Operations Command Center</h2>
+            <p className="text-sm text-[#5B6475]">
+              Real-time live telemetry querying MySQL database tables directly.
+            </p>
+          </div>
+          <button
+            onClick={() => setViewMode('organization')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 transition cursor-pointer self-start shadow-xs"
+            title="Switch to Organization Dashboard view"
+          >
+            <span>🏢 Organization Field Portal</span>
+          </button>
         </div>
         <button
           onClick={fetchOverview}

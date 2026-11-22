@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
 import { DisasterEventsView } from './components/DisasterEventsView';
@@ -8,9 +8,14 @@ import { ResourcesView } from './components/ResourcesView';
 import { DistributionsView } from './components/DistributionsView';
 import { SheltersView } from './components/SheltersView';
 import { VolunteersView } from './components/VolunteersView';
+import { LoginView } from './components/LoginView';
 
 export function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isAuthView, setIsAuthView] = useState(() => {
+    return window.location.pathname === '/login';
+  });
+
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem('auth_user');
@@ -19,6 +24,32 @@ export function App() {
       return null;
     }
   });
+
+  // Listen to popstate for back/forward browser button navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      setIsAuthView(window.location.pathname === '/login');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleOpenLogin = () => {
+    setIsAuthView(true);
+    window.history.pushState({}, '', '/login');
+  };
+
+  const handleCloseLogin = () => {
+    setIsAuthView(false);
+    window.history.pushState({}, '', '/');
+  };
+
+  const handleLoginSuccess = (loggedInUser) => {
+    setUser(loggedInUser);
+    setIsAuthView(false);
+    window.history.pushState({}, '', '/');
+    setActiveTab('dashboard');
+  };
 
   const handleLogout = async () => {
     try {
@@ -37,17 +68,30 @@ export function App() {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
       setUser(null);
-      window.location.href = '/login';
+      setIsAuthView(true);
+      window.history.pushState({}, '', '/login');
     }
   };
+
+  // Standalone, clean full-screen Login page without navbar/tabs
+  if (isAuthView && !user) {
+    return <LoginView onLoginSuccess={handleLoginSuccess} onCancel={handleCloseLogin} />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F7F9FC] text-[#172033] flex flex-col font-sans">
       <Navbar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={(tab) => {
+          setIsAuthView(false);
+          setActiveTab(tab);
+          if (window.location.pathname === '/login') {
+            window.history.pushState({}, '', '/');
+          }
+        }} 
         user={user} 
         onLogout={handleLogout} 
+        onOpenLogin={handleOpenLogin}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">

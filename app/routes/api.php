@@ -21,6 +21,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
+    // Organization Dashboard & Scoped Operations
+    Route::get('/organization/dashboard', [OrganizationController::class, 'dashboard']);
+    Route::post('/organization/volunteers/{id}/assign', [OrganizationController::class, 'assignVolunteer']);
+    Route::post('/organization/resources', [OrganizationController::class, 'storeResource']);
+    Route::put('/organization/resources/{id}', [OrganizationController::class, 'updateResource']);
+    Route::put('/organization/shelters/{id}/occupancy', [OrganizationController::class, 'updateShelterOccupancy']);
+    Route::post('/organization/distributions', [OrganizationController::class, 'storeDistribution']);
+
     // Scoped queries for logged-in organization
     Route::get('/my-shelters', [OrganizationController::class, 'myShelters']);
     Route::get('/my-resources', [OrganizationController::class, 'myResources']);

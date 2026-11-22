@@ -78,7 +78,15 @@ export const api = {
   createReliefRequest: (data) => request('/relief-requests', { method: 'POST', body: JSON.stringify(data) }),
   updateReliefRequest: (id, data) => request(`/relief-requests/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
-  // 9. Auth Operations
+  // 9. Organization Dashboard & Scoped Operations
+  getOrganizationDashboard: () => request('/organization/dashboard'),
+  assignVolunteer: (id, data) => request(`/organization/volunteers/${id}/assign`, { method: 'POST', body: JSON.stringify(data) }),
+  updateOrgResource: (id, data) => request(`/organization/resources/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  createOrgResource: (data) => request('/organization/resources', { method: 'POST', body: JSON.stringify(data) }),
+  updateCampOccupancy: (id, data) => request(`/organization/shelters/${id}/occupancy`, { method: 'PUT', body: JSON.stringify(data) }),
+  createDispatch: (data) => request('/organization/distributions', { method: 'POST', body: JSON.stringify(data) }),
+
+  // 10. Auth Operations
   logout: () => request('/logout', { method: 'POST' }),
   getMe: () => request('/me'),
 };

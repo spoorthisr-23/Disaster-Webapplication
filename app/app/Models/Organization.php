@@ -46,5 +46,28 @@ class Organization extends Model
     {
         return $this->hasMany(Resource::class, 'organization_id', 'id');
     }
-}
 
+    /**
+     * Volunteers assigned to this organization.
+     */
+    public function volunteers(): HasMany
+    {
+        return $this->hasMany(Volunteer::class, 'organization_id', 'id');
+    }
+
+    /**
+     * Emergency requests assigned to this organization.
+     */
+    public function emergencyRequests(): HasMany
+    {
+        return $this->hasMany(EmergencyRequest::class, 'organization_id', 'id');
+    }
+
+    /**
+     * Distribution ledger records managed by this organization.
+     */
+    public function distributions(): HasMany
+    {
+        return $this->hasMany(Distribution::class, 'organization_id', 'id');
+    }
+}

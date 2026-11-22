@@ -15,7 +15,7 @@ import {
   LogIn
 } from 'lucide-react';
 
-export function Navbar({ activeTab, setActiveTab, user: propUser, onLogout }) {
+export function Navbar({ activeTab, setActiveTab, user: propUser, onLogout, onOpenLogin }) {
   const [currentUser, setCurrentUser] = useState(propUser || null);
 
   useEffect(() => {
@@ -139,13 +139,14 @@ export function Navbar({ activeTab, setActiveTab, user: propUser, onLogout }) {
                 </button>
               </div>
             ) : (
-              <a
-                href="/login"
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-xs"
+              <button
+                type="button"
+                onClick={onOpenLogin || (() => { window.location.href = '/login'; })}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-xs cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Sign In</span>
-              </a>
+              </button>
             )}
           </div>
         </div>

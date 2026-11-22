@@ -395,5 +395,35 @@ class DatabaseSeeder extends Seeder
                 'people_affected' => 1200,
             ]
         );
+        // 10. Link Sample Entities to Organization (NGO Red Cross)
+        Shelter::whereIn('shelter_name', ['North District Community Hall', 'St. Jude Emergency Relief Shelter'])
+            ->whereNull('organization_id')
+            ->update(['organization_id' => $org->id]);
+
+        Resource::whereIn('item_name', [
+            'Drinking Water Pack (10L)',
+            'Ready-to-Eat MRE Emergency Rations',
+            'Comprehensive Trauma First Aid Kit',
+            'Thermal Emergency Foil Blankets',
+            'Family Sanitation & Hygiene Kits'
+        ])->whereNull('organization_id')
+          ->update(['organization_id' => $org->id]);
+
+        Volunteer::whereIn('phone', ['+1-555-0201', '+1-555-0203'])
+            ->update([
+                'organization_id' => $org->id,
+                'assigned_area' => 'Eastern Coastal District',
+                'assignment_status' => 'assigned',
+                'current_activity' => 'Mobile Medical Triage & First Aid Station'
+            ]);
+
+        EmergencyRequest::where('request_number', 'REQ-2026-001')
+            ->update(['organization_id' => $org->id]);
+
+        Distribution::where('request_id', 'REQ-20261102-WTR1')
+            ->update([
+                'organization_id' => $org->id,
+                'delivery_status' => 'completed'
+            ]);
     }
 }
