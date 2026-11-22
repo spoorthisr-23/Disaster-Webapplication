@@ -58,29 +58,64 @@ if ($isTiDB) {
     $user = getenv('DB_USERNAME') ?: ($env['DB_USERNAME'] ?? 'root');
     $pass = getenv('DB_PASSWORD') ?: ($env['DB_PASSWORD'] ?? '');
 }
-$caCandidate = getenv('MYSQL_ATTR_SSL_CA') ?: (__DIR__ . '/config/cacert.pem');
-$ca = file_exists($caCandidate) ? $caCandidate : (__DIR__ . '/config/cacert.pem');
+$caPaths = array_values(array_unique(array_filter([
+    getenv('MYSQL_ATTR_SSL_CA') ?: null,
+    __DIR__ . '/config/cacert.pem',
+    '/app/config/cacert.pem',
+    'config/cacert.pem',
+    './config/cacert.pem',
+    (function_exists('realpath') ? realpath(__DIR__ . '/config/cacert.pem') : null) ?: null,
+])));
 
-$pdo = null;
-$opts = [
+$connectionAttempts = [];
+foreach ($caPaths as $path) {
+    if ($path) {
+        $connectionAttempts[] = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            1009 => $path,  // ATTR_SSL_CA = 1009
+            1014 => false,  // ATTR_SSL_VERIFY_SERVER_CERT = 1014
+        ];
+    }
+}
+$connectionAttempts[] = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    1009 => $ca,   // MySQL ATTR_SSL_CA = 1009 (1007 was SSL_KEY, which caused SSL handshake failure)
-    1014 => false, // MySQL ATTR_SSL_VERIFY_SERVER_CERT = 1014 (disables server cert verification for WASI edge container)
+    1009 => null,
+    1014 => false,
+];
+$connectionAttempts[] = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    1014 => false,
+];
+$connectionAttempts[] = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ];
 
-try {
-    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, $opts);
-} catch (Exception $e) {
-    if (strpos($uri, '/api') === 0) {
-        header('Content-Type: application/json; charset=UTF-8');
-        http_response_code(500);
-        echo json_encode([
-            'message' => 'Database connection failed: ' . $e->getMessage(),
-            'error' => $e->getMessage()
-        ]);
-        exit(1);
+$pdo = null;
+$lastError = null;
+
+foreach ($connectionAttempts as $attemptOpts) {
+    try {
+        $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, $attemptOpts);
+        if ($pdo) {
+            break;
+        }
+    } catch (Exception $e) {
+        $lastError = $e;
     }
+}
+
+if (!$pdo && strpos($uri, '/api') === 0) {
+    header('Content-Type: application/json; charset=UTF-8');
+    http_response_code(500);
+    echo json_encode([
+        'message' => 'Database connection failed: ' . ($lastError ? $lastError->getMessage() : 'Connection attempts exhausted'),
+        'error' => $lastError ? $lastError->getMessage() : 'Unable to connect to database'
+    ]);
+    exit(1);
 }
 
 // 4. API Endpoints
