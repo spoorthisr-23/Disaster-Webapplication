@@ -12,8 +12,12 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Web Login View for Admins and Organizations
+// Web Login View for Admins and Organizations (serves compiled React LoginView or Blade fallback)
 Route::get('/login', function () {
+    $indexPath = public_path('index.html');
+    if (File::exists($indexPath)) {
+        return response()->file($indexPath);
+    }
     return view('auth.login');
 })->name('login');
 

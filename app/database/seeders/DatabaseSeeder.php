@@ -121,6 +121,7 @@ class DatabaseSeeder extends Seeder
         $shelter1 = Shelter::firstOrCreate(
             ['shelter_name' => 'North District Community Hall'],
             [
+                'organization_id' => $org->id,
                 'area' => 'North District',
                 'capacity' => 300,
                 'current_occupancy' => 140,
@@ -133,6 +134,7 @@ class DatabaseSeeder extends Seeder
         $shelter2 = Shelter::firstOrCreate(
             ['shelter_name' => 'St. Jude Emergency Relief Shelter'],
             [
+                'organization_id' => $org->id,
                 'area' => 'Coastal Zone',
                 'capacity' => 500,
                 'current_occupancy' => 410,
@@ -145,6 +147,7 @@ class DatabaseSeeder extends Seeder
         $shelter3 = Shelter::firstOrCreate(
             ['shelter_name' => 'Central High Gymnasium Evacuation Center'],
             [
+                'organization_id' => $org->id,
                 'area' => 'River Valley',
                 'capacity' => 250,
                 'current_occupancy' => 250,
@@ -157,6 +160,7 @@ class DatabaseSeeder extends Seeder
         $shelter4 = Shelter::firstOrCreate(
             ['shelter_name' => 'Highland Heights Recreation Center'],
             [
+                'organization_id' => $org->id,
                 'area' => 'Highland Heights',
                 'capacity' => 400,
                 'current_occupancy' => 65,
@@ -170,6 +174,7 @@ class DatabaseSeeder extends Seeder
         $waterRes = Resource::firstOrCreate(
             ['item_name' => 'Drinking Water Pack (10L)'],
             [
+                'organization_id' => $org->id,
                 'category' => 'Water & Hydration',
                 'quantity_available' => 2800,
                 'unit' => 'packs',
@@ -181,6 +186,7 @@ class DatabaseSeeder extends Seeder
         $foodRes = Resource::firstOrCreate(
             ['item_name' => 'Ready-to-Eat MRE Emergency Rations'],
             [
+                'organization_id' => $org->id,
                 'category' => 'Food & Nutrition',
                 'quantity_available' => 4200,
                 'unit' => 'meals',
@@ -192,6 +198,7 @@ class DatabaseSeeder extends Seeder
         $medicalRes = Resource::firstOrCreate(
             ['item_name' => 'Comprehensive Trauma First Aid Kit'],
             [
+                'organization_id' => $org->id,
                 'category' => 'Medical Supplies',
                 'quantity_available' => 550,
                 'unit' => 'kits',
@@ -203,6 +210,7 @@ class DatabaseSeeder extends Seeder
         $blanketRes = Resource::firstOrCreate(
             ['item_name' => 'Thermal Emergency Foil Blankets'],
             [
+                'organization_id' => $org->id,
                 'category' => 'Bedding & Warmth',
                 'quantity_available' => 2100,
                 'unit' => 'blankets',
@@ -214,6 +222,7 @@ class DatabaseSeeder extends Seeder
         $hygieneRes = Resource::firstOrCreate(
             ['item_name' => 'Family Sanitation & Hygiene Kits'],
             [
+                'organization_id' => $org->id,
                 'category' => 'Sanitation',
                 'quantity_available' => 950,
                 'unit' => 'kits',
@@ -226,6 +235,7 @@ class DatabaseSeeder extends Seeder
         $vol1 = Volunteer::firstOrCreate(
             ['phone' => '+1-555-0201'],
             [
+                'organization_id' => $org->id,
                 'name' => 'Dr. Sarah Jenkins',
                 'skills' => 'Emergency Triage, Trauma Care, First Aid',
                 'assigned_area' => 'Coastal Zone',
@@ -237,6 +247,7 @@ class DatabaseSeeder extends Seeder
         $vol2 = Volunteer::firstOrCreate(
             ['phone' => '+1-555-0202'],
             [
+                'organization_id' => $org->id,
                 'name' => 'Michael Chang',
                 'skills' => 'Boat Operations, Search & Rescue, Flood Evacuation',
                 'assigned_area' => 'River Valley',
@@ -248,6 +259,7 @@ class DatabaseSeeder extends Seeder
         $vol3 = Volunteer::firstOrCreate(
             ['phone' => '+1-555-0203'],
             [
+                'organization_id' => $org->id,
                 'name' => 'Amina Patel',
                 'skills' => 'Warehouse Management, Heavy Vehicle Driving, Logistics',
                 'assigned_area' => 'North District',
