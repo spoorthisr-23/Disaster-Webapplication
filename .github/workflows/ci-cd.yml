@@ -101,7 +101,12 @@ jobs:
       - name: Authenticate with Wasmer
         env:
           WASMER_TOKEN: ${{ secrets.WASMER_TOKEN }}
-        run: wasmer login "$WASMER_TOKEN"
+        run: |
+          wasmer login "$WASMER_TOKEN"
+          if ! wasmer whoami | grep -q "spoorthi-23"; then
+            echo "::error::The WASMER_TOKEN belongs to an account other than spoorthi-23."
+            exit 1
+          fi
 
       - name: Auto-bump Package Version
         run: |
