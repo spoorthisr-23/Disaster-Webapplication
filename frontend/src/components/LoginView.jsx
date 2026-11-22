@@ -41,7 +41,7 @@ export function LoginView({ onLoginSuccess, onCancel }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Invalid credentials. Please verify your email and password.');
+        throw new Error(data?.message || data?.error || 'Invalid credentials. Please verify your email and password.');
       }
 
       if (data.token) {

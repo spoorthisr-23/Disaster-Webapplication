@@ -32,7 +32,8 @@ $env = [];
 if (file_exists($envFile)) {
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        if (strpos(trim($line), '#') === 0) continue;
+        if (strpos(trim($line), '#') === 0)
+            continue;
         $parts = explode('=', $line, 2);
         if (count($parts) === 2) {
             $env[trim($parts[0])] = trim($parts[1], " \t\n\r\0\x0B\"'");
@@ -42,23 +43,27 @@ if (file_exists($envFile)) {
 
 $host = getenv('DB_HOST') ?: ($env['DB_HOST'] ?? 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com');
 $port = getenv('DB_PORT') ?: ($env['DB_PORT'] ?? '4000');
-$db   = getenv('DB_DATABASE') ?: ($env['DB_DATABASE'] ?? 'test');
+$db = getenv('DB_DATABASE') ?: ($env['DB_DATABASE'] ?? 'test');
 $user = getenv('DB_USERNAME') ?: ($env['DB_USERNAME'] ?? '4RF8cAaQXxcVam6.root');
 $pass = getenv('DB_PASSWORD') ?: ($env['DB_PASSWORD'] ?? 'eq5NxBAQZUoL2tqE');
 $caCandidate = getenv('MYSQL_ATTR_SSL_CA') ?: (__DIR__ . '/config/cacert.pem');
-$ca   = file_exists($caCandidate) ? $caCandidate : (__DIR__ . '/config/cacert.pem');
+$ca = file_exists($caCandidate) ? $caCandidate : (__DIR__ . '/config/cacert.pem');
+
+$sslCaKey = defined('\Pdo\Mysql::ATTR_SSL_CA')
+    ? \Pdo\Mysql::ATTR_SSL_CA
+    : (defined('PDO::MYSQL_ATTR_SSL_CA') ? PDO::MYSQL_ATTR_SSL_CA : 1007);
+
+$sslVerifyKey = defined('\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT')
+    ? \Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT
+    : (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT') ? PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT : 1014);
 
 $pdo = null;
 $opts = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    $sslCaKey => $ca,
+    $sslVerifyKey => false,
 ];
-$sslKey = defined('\Pdo\Mysql::ATTR_SSL_CA') 
-    ? \Pdo\Mysql::ATTR_SSL_CA 
-    : (defined('PDO::MYSQL_ATTR_SSL_CA') ? PDO::MYSQL_ATTR_SSL_CA : 1007);
-if (file_exists($ca)) {
-    $opts[$sslKey] = $ca;
-}
 
 try {
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4", $user, $pass, $opts);
@@ -66,7 +71,10 @@ try {
     if (strpos($uri, '/api') === 0) {
         header('Content-Type: application/json; charset=UTF-8');
         http_response_code(500);
-        echo json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]);
+        echo json_encode([
+            'message' => 'Database connection failed: ' . $e->getMessage(),
+            'error' => $e->getMessage()
+        ]);
         exit(1);
     }
 }
@@ -77,7 +85,8 @@ if (strpos($uri, '/api') === 0) {
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
-    function getBearerToken(): ?string {
+    function getBearerToken(): ?string
+    {
         $headers = function_exists('getallheaders') ? getallheaders() : [];
         $auth = $headers['Authorization'] ?? $headers['authorization'] ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
         if (preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
@@ -86,10 +95,13 @@ if (strpos($uri, '/api') === 0) {
         return null;
     }
 
-    function authenticateUser(?PDO $pdo): ?array {
-        if (!$pdo) return null;
+    function authenticateUser(?PDO $pdo): ?array
+    {
+        if (!$pdo)
+            return null;
         $token = getBearerToken();
-        if (!$token) return null;
+        if (!$token)
+            return null;
 
         $hashed = hash('sha256', $token);
         $stmt = $pdo->prepare("SELECT * FROM personal_access_tokens WHERE token = ? OR tokenable_id IS NOT NULL ORDER BY id DESC LIMIT 1");
@@ -156,7 +168,8 @@ if (strpos($uri, '/api') === 0) {
         try {
             $ins = $pdo->prepare("INSERT INTO personal_access_tokens (tokenable_type, tokenable_id, name, token, abilities, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
             $ins->execute(['App\\Models\\User', $userRow['id'], 'browser-session', $hashedToken, '["*"]']);
-        } catch (Exception $e) {}
+        } catch (Exception $e) {
+        }
 
         $org = null;
         if (!empty($userRow['organization_id'])) {
@@ -169,11 +182,11 @@ if (strpos($uri, '/api') === 0) {
             'message' => 'Signed in successfully.',
             'token' => $plainToken,
             'user' => [
-                'id' => (int)$userRow['id'],
+                'id' => (int) $userRow['id'],
                 'name' => $userRow['name'],
                 'email' => $userRow['email'],
                 'role' => $userRow['role'],
-                'organization_id' => $userRow['organization_id'] ? (int)$userRow['organization_id'] : null,
+                'organization_id' => $userRow['organization_id'] ? (int) $userRow['organization_id'] : null,
                 'organization' => $org,
             ]
         ]);
@@ -193,7 +206,7 @@ if (strpos($uri, '/api') === 0) {
 
         $orgId = $currentUser['organization_id'] ?? null;
         if (!$orgId && $currentUser['role'] === 'admin' && isset($_GET['organization_id'])) {
-            $orgId = (int)$_GET['organization_id'];
+            $orgId = (int) $_GET['organization_id'];
         }
 
         if (!$orgId) {
@@ -236,22 +249,22 @@ if (strpos($uri, '/api') === 0) {
         $distributions = $dStmt->fetchAll();
 
         // Inventory computations
-        $foodPackets = (int)array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'Food') !== false || stripos($r['category'], 'Food') !== false || stripos($r['item_name'], 'MRE') !== false), 'quantity_available'));
-        $waterBottles = (int)array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'Water') !== false || stripos($r['category'], 'Water') !== false), 'quantity_available'));
-        $firstAidKits = (int)array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'First Aid') !== false || stripos($r['item_name'], 'Trauma') !== false), 'quantity_available'));
-        $medicineKits = (int)array_sum(array_column(array_filter($resources, fn($r) => stripos($r['category'], 'Medical') !== false && stripos($r['item_name'], 'First Aid') === false), 'quantity_available'));
-        $blankets = (int)array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'Blanket') !== false || stripos($r['category'], 'Bedding') !== false), 'quantity_available'));
-        $availableResources = (int)array_sum(array_column($resources, 'quantity_available'));
+        $foodPackets = (int) array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'Food') !== false || stripos($r['category'], 'Food') !== false || stripos($r['item_name'], 'MRE') !== false), 'quantity_available'));
+        $waterBottles = (int) array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'Water') !== false || stripos($r['category'], 'Water') !== false), 'quantity_available'));
+        $firstAidKits = (int) array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'First Aid') !== false || stripos($r['item_name'], 'Trauma') !== false), 'quantity_available'));
+        $medicineKits = (int) array_sum(array_column(array_filter($resources, fn($r) => stripos($r['category'], 'Medical') !== false && stripos($r['item_name'], 'First Aid') === false), 'quantity_available'));
+        $blankets = (int) array_sum(array_column(array_filter($resources, fn($r) => stripos($r['item_name'], 'Blanket') !== false || stripos($r['category'], 'Bedding') !== false), 'quantity_available'));
+        $availableResources = (int) array_sum(array_column($resources, 'quantity_available'));
 
-        $lowStock = array_values(array_filter($resources, fn($r) => (int)$r['quantity_available'] > 0 && (int)$r['quantity_available'] <= 500));
-        $outOfStock = array_values(array_filter($resources, fn($r) => (int)$r['quantity_available'] <= 0));
+        $lowStock = array_values(array_filter($resources, fn($r) => (int) $r['quantity_available'] > 0 && (int) $r['quantity_available'] <= 500));
+        $outOfStock = array_values(array_filter($resources, fn($r) => (int) $r['quantity_available'] <= 0));
 
         $totalRequests = count($requests);
         $pendingRequests = count(array_filter($requests, fn($r) => in_array($r['status'], ['pending', 'new', 'unassigned'])));
         $activeOps = count(array_filter($requests, fn($r) => in_array($r['status'], ['assigned', 'in_progress', 'dispatched'])));
         $completedRequests = count(array_filter($requests, fn($r) => in_array($r['status'], ['fulfilled', 'completed', 'resolved'])));
 
-        $totalDistributed = (int)array_sum(array_column($distributions, 'quantity_distributed'));
+        $totalDistributed = (int) array_sum(array_column($distributions, 'quantity_distributed'));
         $activeVolunteers = count(array_filter($volunteers, fn($v) => !empty($v['is_available'])));
 
         $activities = [];
@@ -278,7 +291,7 @@ if (strpos($uri, '/api') === 0) {
 
         echo json_encode([
             'organization' => [
-                'id' => (int)$org['id'],
+                'id' => (int) $org['id'],
                 'name' => $org['name'],
                 'type' => $org['type'],
                 'area' => $org['area'],
@@ -293,7 +306,7 @@ if (strpos($uri, '/api') === 0) {
                 'available_resources' => $availableResources,
                 'total_resources_distributed' => $totalDistributed,
                 'active_volunteers' => $activeVolunteers,
-                'total_people_assisted' => (int)array_sum(array_column(array_filter($requests, fn($r) => in_array($r['status'], ['fulfilled', 'completed'])), 'people_affected')) + $totalDistributed,
+                'total_people_assisted' => (int) array_sum(array_column(array_filter($requests, fn($r) => in_array($r['status'], ['fulfilled', 'completed'])), 'people_affected')) + $totalDistributed,
             ],
             'inventory' => [
                 'food_packets' => $foodPackets,
@@ -319,8 +332,8 @@ if (strpos($uri, '/api') === 0) {
                 'total_managed' => count($shelters),
                 'open_count' => count(array_filter($shelters, fn($s) => strtoupper($s['status']) === 'OPEN')),
                 'full_count' => count(array_filter($shelters, fn($s) => strtoupper($s['status']) === 'FULL')),
-                'total_capacity' => (int)array_sum(array_column($shelters, 'capacity')),
-                'total_occupancy' => (int)array_sum(array_column($shelters, 'current_occupancy')),
+                'total_capacity' => (int) array_sum(array_column($shelters, 'capacity')),
+                'total_occupancy' => (int) array_sum(array_column($shelters, 'current_occupancy')),
                 'facilities' => $shelters,
             ],
             'distributions' => [
@@ -339,7 +352,7 @@ if (strpos($uri, '/api') === 0) {
     // POST /api/organization/volunteers/{id}/assign
     // =========================================================================
     if (preg_match('#^/api/organization/volunteers/(\d+)/assign$#', $uri, $matches) && $method === 'POST') {
-        $volId = (int)$matches[1];
+        $volId = (int) $matches[1];
         $area = trim($input['assigned_area'] ?? 'Coastal Sector');
         $status = trim($input['assignment_status'] ?? 'assigned');
 
@@ -356,8 +369,8 @@ if (strpos($uri, '/api') === 0) {
     // PUT /api/organization/resources/{id}
     // =========================================================================
     if (preg_match('#^/api/organization/resources/(\d+)$#', $uri, $matches) && $method === 'PUT') {
-        $resId = (int)$matches[1];
-        $qty = (int)($input['quantity_available'] ?? 0);
+        $resId = (int) $matches[1];
+        $qty = (int) ($input['quantity_available'] ?? 0);
         $loc = trim($input['warehouse_location'] ?? 'Central Warehouse');
 
         $up = $pdo->prepare("UPDATE resources SET quantity_available = ?, warehouse_location = ?, last_updated = NOW() WHERE resource_id = ?");
@@ -378,7 +391,7 @@ if (strpos($uri, '/api') === 0) {
 
         $name = trim($input['item_name'] ?? 'Relief Item');
         $cat = trim($input['category'] ?? 'General');
-        $qty = (int)($input['quantity_available'] ?? 100);
+        $qty = (int) ($input['quantity_available'] ?? 100);
         $unit = trim($input['unit'] ?? 'units');
         $loc = trim($input['warehouse_location'] ?? 'Central Depot A');
 
@@ -397,8 +410,8 @@ if (strpos($uri, '/api') === 0) {
     // PUT /api/organization/shelters/{id}/occupancy
     // =========================================================================
     if (preg_match('#^/api/organization/shelters/(\d+)/occupancy$#', $uri, $matches) && $method === 'PUT') {
-        $shelterId = (int)$matches[1];
-        $newOcc = (int)($input['current_occupancy'] ?? 0);
+        $shelterId = (int) $matches[1];
+        $newOcc = (int) ($input['current_occupancy'] ?? 0);
 
         $sStmt = $pdo->prepare("SELECT * FROM shelters WHERE id = ?");
         $sStmt->execute([$shelterId]);
@@ -410,7 +423,7 @@ if (strpos($uri, '/api') === 0) {
             exit;
         }
 
-        $status = ($newOcc >= (int)$shelter['capacity']) ? 'FULL' : 'OPEN';
+        $status = ($newOcc >= (int) $shelter['capacity']) ? 'FULL' : 'OPEN';
         $up = $pdo->prepare("UPDATE shelters SET current_occupancy = ?, status = ? WHERE id = ?");
         $up->execute([$newOcc, $status, $shelterId]);
 
@@ -426,9 +439,9 @@ if (strpos($uri, '/api') === 0) {
         $user = authenticateUser($pdo);
         $orgId = $user['organization_id'] ?? 1;
 
-        $reqId = (int)($input['request_id'] ?? 1);
-        $resId = (int)($input['resource_id'] ?? 1);
-        $qty = (int)($input['quantity_distributed'] ?? 10);
+        $reqId = (int) ($input['request_id'] ?? 1);
+        $resId = (int) ($input['resource_id'] ?? 1);
+        $qty = (int) ($input['quantity_distributed'] ?? 10);
         $status = trim($input['delivery_status'] ?? 'pending');
         $notes = trim($input['notes'] ?? 'Dispatched via field team');
 
@@ -462,7 +475,7 @@ if (strpos($uri, '/api') === 0) {
     if (preg_match('#^/api/emergency-requests/track/([A-Za-z0-9\-]+)$#', $uri, $m)) {
         $code = trim($m[1]);
         $stmt = $pdo->prepare("SELECT * FROM emergency_requests WHERE request_number = ? OR id = ? LIMIT 1");
-        $stmt->execute([$code, (int)$code]);
+        $stmt->execute([$code, (int) $code]);
         $req = $stmt->fetch();
         if ($req) {
             echo json_encode(['status' => 'success', 'data' => $req]);
