@@ -223,6 +223,3 @@ The project employs an automated **GitHub Actions** pipeline ([`.github/workflow
 
 ---
 
-## 📄 License
-This project is open-source under the [MIT License](LICENSE).
-
