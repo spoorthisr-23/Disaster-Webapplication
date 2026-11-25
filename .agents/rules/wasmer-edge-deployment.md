@@ -4,17 +4,15 @@
 - **Immutable Package Versions**: Wasmer package registry strictly rejects re-publishing existing versions (`GraphQL API failure: version already exists`). CI/CD pipelines must auto-increment the patch version in `wasmer.toml` on every release (e.g. `0.1.$(( github.run_number + 10 ))`).
 - **Headless Deployments**: Always execute `wasmer deploy --non-interactive --no-wait` in CI/CD and non-interactive scripts to prevent interactive terminal hangs.
 - **Root Manifest Binding**: When linking an existing Wasmer app, bind the exact registered `app_id` and `name` directly into the project's root `app.yaml` instead of creating nested subprojects.
-- **Directory Invariant**: The Wasmer package and PHP runtime live inside `app/` (`wasmer.toml`, `composer.json`, `app.yaml`). CI/CD must set working directory to `app`.
+- **Directory Invariant**: The Wasmer package and PHP runtime live at the repository root (`wasmer.toml`, `composer.json`, `app.yaml`). CI/CD runs directly from the repository root.
 
 ## 2. Fullstack Frontend Build & Sync
-- **React Source vs Public Assets**: The React frontend source lives in `frontend/`, while Laravel and Wasmer serve static assets from `app/public/`.
-- **Sync Trigger**: Whenever modifying UI components in `frontend/src/`, always run:
+- **React Source vs Public Assets**: The React frontend source lives in `resources/` (`resources/index.html`, `resources/js/`, `resources/css/`), while Laravel and Wasmer serve static assets from `public/`.
+- **Build Trigger**: Whenever modifying UI components in `resources/js/`, run from the repository root:
   ```powershell
-  cd frontend
   npm run build
-  Copy-Item -Path "dist/*" -Destination "../app/public" -Recurse -Force
   ```
-- Do not commit stale bundles; clean obsolete asset hashes from `app/public/assets` upon rebuilding.
+- Vite cleans obsolete asset hashes from `public/assets` upon rebuilding and outputs `public/index.html` + `public/assets/*` without overwriting `public/index.php`.
 
 ## 3. Remote Cloud Database Synchronization (TiDB)
 - **Container Statelesness**: Wasmer Edge containers run statelessly and cannot execute interactive shell commands on demand.

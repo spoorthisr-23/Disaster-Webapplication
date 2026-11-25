@@ -3,7 +3,7 @@
 
 > **Notice for Frontend Team:**  
 > The React 19 + Tailwind CSS frontend and Laravel 13 backend are **already initialized, operational, and connected to TiDB Cloud & Wasmer Edge**.  
-> **DO NOT** delete the `frontend/` directory, recreate the Vite project, or start from scratch. Your task is to **extend existing views and add the remaining modules** detailed below.
+> **DO NOT** delete `resources/js/`, recreate the Vite project, or start from scratch. Your task is to **extend existing views and add the remaining modules** detailed below.
 
 ---
 
@@ -15,9 +15,9 @@ The application already has a fully functional core architecture, database, API 
 - **Live Deployment:** [https://webapp.wasmer.app/](https://webapp.wasmer.app/)
 - **Live Login Portal:** [https://webapp.wasmer.app/login](https://webapp.wasmer.app/login)
 - **Database:** TiDB Cloud Serverless MySQL (Port 4000 over TLS/SSL)
-- **Backend Engine:** Laravel 13 (PHP 8.5 WASI running on Wasmer Edge via `app/server.php`)
+- **Backend Engine:** Laravel 13 (PHP 8.5 WASI running on Wasmer Edge via `server.php`)
 - **Frontend Stack:** React 19, Vite, Tailwind CSS, Lucide React (Pure JavaScript/JSX — **NO TypeScript**)
-- **API Service Layer:** `frontend/src/api.js` (Handles Bearer JWT tokens via `localStorage`)
+- **API Service Layer:** `resources/js/api.js` (Handles Bearer JWT tokens via `localStorage`)
 
 ### B. Existing Database Tables & API Endpoints
 | Feature | Table in DB | Existing API Endpoint | Description |
@@ -32,7 +32,7 @@ The application already has a fully functional core architecture, database, API 
 | **Incident Reports** | `incident_reports` | `GET/POST /api/incident-reports` | Field damage assessments and casualty logs. |
 | **Disaster Events** | `disaster_events` | `GET/POST /api/disaster-events` | Active disaster declarations (cyclones, floods, earthquakes). |
 
-### C. Existing Frontend UI Views (`frontend/src/components/`)
+### C. Existing Frontend UI Views (`resources/js/components/`)
 1. **`DashboardView.jsx`**: Platform-wide Operations Command Center with real-time KPI counters.
 2. **`CitizenPortalView.jsx`**: Public Citizen SOS distress signal broadcaster with GPS auto-detection & live status tracking.
 3. **`OrganizationDashboardView.jsx`**: NGO Portal (Red Cross) with warehouse stock, volunteer rosters, distribution logs, and shelter capacity requests.
@@ -117,35 +117,28 @@ flowchart TD
 
 1. **NO TypeScript:** Do not create `.ts` or `.tsx` files. Use standard ES6+ JavaScript (`.js` and `.jsx`).
 2. **NO Next.js or Node backend:** The backend is PHP Laravel 13 running on Wasmer Edge.
-3. **Use Existing API Wrapper:** Import and extend `frontend/src/api.js` for all backend requests.
+3. **Use Existing API Wrapper:** Import and extend `resources/js/api.js` for all backend requests.
 4. **Preserve Citizen SOS:** Do not merge Citizen SOS into the Organization or Admin screens; it must remain an independent, zero-login public emergency service.
-5. **Asset Sync Invariant:** Wasmer Edge serves the frontend from `app/public/`. Whenever you rebuild:
+5. **Asset Sync Invariant:** Wasmer Edge serves the frontend from `public/`. Whenever you rebuild from the project root:
    ```powershell
-   cd frontend
    npm run build
-   # Sync to backend public directory
-   Copy-Item -Path "dist/*" -Destination "../app/public" -Recurse -Force
    ```
-   *(Or run the root script: `.\build-fullstack.ps1`)*
+   *(Or run the root script: `.\build-fullstack.ps1`, which validates `public/index.html` and `public/assets/`)*
 
 ---
 
 ## 4. Quick-Start Instructions for Frontend Developers
 
 ```bash
-# 1. Navigate to frontend directory
-cd frontend
-
-# 2. Install dependencies
+# 1. From the project root, install dependencies
 npm install
 
-# 3. Start Vite Dev Server with hot-reload
+# 2. Start Vite Dev Server with hot-reload (proxies /api to http://localhost:8000)
 npm run dev
-# Open http://localhost:5173 in browser
+# Open http://localhost:3000 in browser
 
-# 4. Production Build & Fullstack Sync
+# 3. Production Build & Fullstack Verification
 npm run build
-cd ..
 .\build-fullstack.ps1
 ```
 

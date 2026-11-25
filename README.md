@@ -163,14 +163,13 @@ cd Disaster-Webapplication
 
 ### 2. Backend Setup
 ```bash
-cd app
 composer install
 cp .env.example .env
 php artisan key:generate
 ```
 
 ### 3. Database Configuration
-In `app/.env`, configure your database connection (TiDB Cloud or local MySQL):
+In `.env`, configure your database connection (TiDB Cloud or local MySQL):
 ```env
 DB_CONNECTION=mysql
 DB_HOST=gateway01.ap-northeast-1.prod.aws.tidbcloud.com
@@ -187,16 +186,12 @@ php artisan migrate --seed
 
 ### 4. Frontend Build
 ```bash
-cd ../frontend
 npm install
 npm run build
-# Sync assets to Laravel public
-Copy-Item -Path "dist/*" -Destination "../app/public" -Recurse -Force
 ```
 
 ### 5. Start the Application
 ```bash
-cd ../app
 php artisan serve
 ```
 Open **[http://127.0.0.1:8000/login](http://127.0.0.1:8000/login)** in your browser.
