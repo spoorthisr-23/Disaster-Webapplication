@@ -1,5 +1,5 @@
-// Central API service connecting to Laravel Backend via Vite Proxy
-const API_BASE = '/api';
+// Central API service connecting to Laravel Backend (supports VITE_API_URL or relative proxy)
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
