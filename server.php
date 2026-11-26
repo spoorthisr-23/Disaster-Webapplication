@@ -59,11 +59,11 @@ if ($isTiDB) {
     $pass = getenv('DB_PASSWORD') ?: ($env['DB_PASSWORD'] ?? '');
 }
 $sslCaKey = class_exists('\Pdo\Mysql') && defined('\Pdo\Mysql::ATTR_SSL_CA')
-    ? \Pdo\Mysql::ATTR_SSL_CA
+    ? constant('\Pdo\Mysql::ATTR_SSL_CA')
     : (defined('\PDO::MYSQL_ATTR_SSL_CA') ? constant('\PDO::MYSQL_ATTR_SSL_CA') : 1009);
 
 $sslVerifyKey = class_exists('\Pdo\Mysql') && defined('\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT')
-    ? \Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT
+    ? constant('\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT')
     : (defined('\PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT') ? constant('\PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT') : 1014);
 
 $caCandidatePaths = [
@@ -631,7 +631,7 @@ if (strpos($uri, '/api') === 0) {
     }
     if (preg_match('#^/api/emergency-requests/track/([A-Za-z0-9\-]+)$#', $uri, $m)) {
         $code = trim($m[1]);
-        $stmt = $pdo->prepare("SELECT e.*, d.title as disaster_title, s.shelter_name, s.location as shelter_location FROM emergency_requests e LEFT JOIN disaster_events d ON e.disaster_event_id = d.id LEFT JOIN shelters s ON e.shelter_id = s.id WHERE e.request_number = ? OR e.id = ? LIMIT 1");
+        $stmt = $pdo->prepare("SELECT e.*, d.title as disaster_title, s.shelter_name, s.area as shelter_location FROM emergency_requests e LEFT JOIN disaster_events d ON e.disaster_event_id = d.id LEFT JOIN shelters s ON e.shelter_id = s.shelter_id WHERE e.request_number = ? OR e.id = ? LIMIT 1");
         $stmt->execute([$code, (int) $code]);
         $req = $stmt->fetch();
         if ($req) {
