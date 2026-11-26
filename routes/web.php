@@ -21,6 +21,15 @@ Route::get('/login', function () {
     return view('auth.login');
 })->name('login');
 
+// Interactive Blade Security Demonstration (XSS & CSRF for panel presentation)
+Route::get('/security-demo', function () {
+    return view('security-demo');
+});
+
+Route::post('/security-demo/csrf-test', function () {
+    return redirect('/security-demo')->with('csrf_success', 'Secret session token validated successfully! Request was processed.');
+});
+
 Route::get('/migrate-setup', function () {
     try {
         Artisan::call('migrate:fresh', [
