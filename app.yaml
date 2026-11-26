@@ -1,6 +1,6 @@
 kind: wasmer.io/App.v0
-name: WebApp
-owner: spoorthisr-23
+name: Larvel
+owner: spoorthi-23
 package: .
 
 env:
